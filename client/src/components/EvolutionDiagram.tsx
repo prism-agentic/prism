@@ -22,7 +22,7 @@ const TIERS: TierData[] = [
     descKey: "evo.tier0.desc",
     metricKeys: ["evo.tier0.m0", "evo.tier0.m1", "evo.tier0.m2"],
     color: "#00d4ff",
-    ringRadius: 50,
+    ringRadius: 65,
   },
   {
     level: "L2",
@@ -30,7 +30,7 @@ const TIERS: TierData[] = [
     descKey: "evo.tier1.desc",
     metricKeys: ["evo.tier1.m0", "evo.tier1.m1", "evo.tier1.m2"],
     color: "#a78bfa",
-    ringRadius: 88,
+    ringRadius: 130,
   },
   {
     level: "L3",
@@ -38,7 +38,7 @@ const TIERS: TierData[] = [
     descKey: "evo.tier2.desc",
     metricKeys: ["evo.tier2.m0", "evo.tier2.m1", "evo.tier2.m2"],
     color: "#ffb347",
-    ringRadius: 126,
+    ringRadius: 195,
   },
 ];
 
@@ -52,12 +52,12 @@ export default function EvolutionDiagram() {
 
   const displayedTier = hoveredTier !== null ? hoveredTier : activeTier;
 
-  // Compact dimensions — wider aspect ratio, less vertical space
+  // Spacious dimensions — rings well separated, still compact overall
   const W = 800;
-  const H = 220;
+  const H = 320;
   const CX = W / 2;
-  const CY = 110;
-  const ELLIPSE_RATIO = 0.45; // flatter ellipses
+  const CY = 155;
+  const ELLIPSE_RATIO = 0.48; // slightly rounder ellipses for better separation
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
