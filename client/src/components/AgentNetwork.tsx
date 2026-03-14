@@ -2,6 +2,7 @@
  * PRISM Agent Network — Interactive Multi-Agent Collaboration Visualization
  * Canvas-based animated network with auto-cycling agent highlight and info panel
  * Agents cycle in workflow order: Conductor → Researcher → PM → UX → Backend → Frontend → DevOps → Critic → Growth
+ * Mobile: card-based list layout with auto-cycling; Desktop: full Canvas animation
  */
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useI18n } from "@/contexts/I18nContext";
@@ -38,7 +39,6 @@ const AMBER = "#ffb347";
 const CYAN_DIM = "rgba(0, 212, 255, 0.15)";
 const AMBER_DIM = "rgba(255, 179, 71, 0.15)";
 
-// Agent definitions
 const AGENT_DEFS: Omit<AgentNode, "x" | "y" | "vx" | "vy">[] = [
   { id: "conductor", labelKey: "net.conductor", radius: 22, color: CYAN, glowColor: CYAN_DIM, division: "core" },
   { id: "backend", labelKey: "net.backend", radius: 16, color: CYAN, glowColor: CYAN_DIM, division: "eng" },
@@ -51,17 +51,8 @@ const AGENT_DEFS: Omit<AgentNode, "x" | "y" | "vx" | "vy">[] = [
   { id: "researcher", labelKey: "net.researcher", radius: 13, color: AMBER, glowColor: AMBER_DIM, division: "core" },
 ];
 
-// Workflow order: the actual collaboration sequence
 const WORKFLOW_ORDER = [
-  "conductor",   // 1. Conductor orchestrates everything
-  "researcher",  // 2. Researcher does technical research
-  "pm",          // 3. PM defines requirements
-  "ux",          // 4. UX designs the experience
-  "backend",     // 5. Backend builds the system
-  "frontend",    // 6. Frontend builds the UI
-  "devops",      // 7. DevOps deploys
-  "critic",      // 8. Critic reviews quality
-  "growth",      // 9. Growth optimizes
+  "conductor", "researcher", "pm", "ux", "backend", "frontend", "devops", "critic", "growth",
 ];
 
 const CONNECTIONS: Connection[] = [
@@ -83,7 +74,6 @@ const CONNECTIONS: Connection[] = [
   { from: "researcher", to: "pm", strength: 0.5 },
 ];
 
-// Agent info for the info panel
 const AGENT_INFO: Record<string, { roleKey: string; divKey: string }> = {
   conductor: { roleKey: "net.tip.conductor", divKey: "net.div.core" },
   backend: { roleKey: "net.tip.backend", divKey: "net.div.eng" },
@@ -143,21 +133,26 @@ export default function AgentNetwork() {
   const isVisibleRef = useRef(true);
 
   const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
-  const [activeAgent, setActiveAgent] = useState<number>(0); // index in WORKFLOW_ORDER
+  const [activeAgent, setActiveAgent] = useState<number>(0);
   const [dimensions, setDimensions] = useState({ w: 600, h: 400 });
+  const [isMobile, setIsMobile] = useState(false);
   const { t } = useI18n();
 
-  // The displayed agent: hover takes priority, otherwise auto-cycle
   const displayedId = hoveredAgent !== null ? hoveredAgent : WORKFLOW_ORDER[activeAgent];
   const displayedDef = AGENT_DEFS.find((a) => a.id === displayedId)!;
   const displayedInfo = AGENT_INFO[displayedId];
 
-  // Keep ref in sync for canvas drawing
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   useEffect(() => {
     activeIdRef.current = displayedId;
   }, [displayedId]);
 
-  // Auto-cycle timer
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -172,7 +167,7 @@ export default function AgentNetwork() {
     };
   }, [startTimer]);
 
-  // Visibility observer — pause animation when off-screen
+  // Visibility observer
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -184,8 +179,9 @@ export default function AgentNetwork() {
     return () => obs.disconnect();
   }, []);
 
-  // Resize handler
+  // Resize handler (desktop only)
   useEffect(() => {
+    if (isMobile) return;
     const container = containerRef.current;
     if (!container) return;
     const obs = new ResizeObserver((entries) => {
@@ -198,9 +194,9 @@ export default function AgentNetwork() {
     });
     obs.observe(container);
     return () => obs.disconnect();
-  }, []);
+  }, [isMobile]);
 
-  // Mouse interaction
+  // Mouse interaction (desktop only)
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -232,8 +228,9 @@ export default function AgentNetwork() {
     startTimer();
   }, [startTimer]);
 
-  // Animation loop
+  // Animation loop (desktop only)
   useEffect(() => {
+    if (isMobile) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -283,8 +280,8 @@ export default function AgentNetwork() {
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x, to.y);
         ctx.strokeStyle = isHighlighted
-          ? (from.color === CYAN || to.color === CYAN ? `rgba(0, 212, 255, ${alpha})` : `rgba(255, 179, 71, ${alpha})`)
-          : `rgba(255, 255, 255, ${alpha})`;
+          ? (from.color === CYAN ? `rgba(0, 212, 255, ${alpha})` : `rgba(255, 179, 71, ${alpha})`)
+          : `rgba(136, 146, 176, ${alpha})`;
         ctx.lineWidth = isHighlighted ? 1.5 : 0.8;
         ctx.stroke();
       });
@@ -326,7 +323,6 @@ export default function AgentNetwork() {
         const alpha = isDimmed ? 0.3 : 1;
         const r = isHovered ? node.radius * 1.2 : node.radius;
 
-        // Glow
         if (isHovered || isConnected) {
           const glow = ctx.createRadialGradient(node.x, node.y, r * 0.5, node.x, node.y, r * 2.5);
           glow.addColorStop(0, node.color === CYAN ? "rgba(0, 212, 255, 0.25)" : "rgba(255, 179, 71, 0.25)");
@@ -337,7 +333,6 @@ export default function AgentNetwork() {
           ctx.fill();
         }
 
-        // Pulsing ring for active agent
         if (isHovered) {
           ctx.beginPath();
           ctx.arc(node.x, node.y, r * 1.6, 0, Math.PI * 2);
@@ -348,7 +343,6 @@ export default function AgentNetwork() {
           ctx.stroke();
         }
 
-        // Node circle
         ctx.beginPath();
         ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
         const fillColor = node.color === CYAN
@@ -362,7 +356,6 @@ export default function AgentNetwork() {
         ctx.lineWidth = isHovered ? 2 : 1.2;
         ctx.stroke();
 
-        // Inner dot
         ctx.beginPath();
         ctx.arc(node.x, node.y, 3, 0, Math.PI * 2);
         ctx.fillStyle = node.color === CYAN
@@ -370,22 +363,163 @@ export default function AgentNetwork() {
           : `rgba(255, 179, 71, ${alpha})`;
         ctx.fill();
 
-        // Label
         ctx.font = `${isHovered ? "600" : "500"} ${isHovered ? "11px" : "10px"} 'JetBrains Mono', monospace`;
         ctx.textAlign = "center";
         ctx.fillStyle = `rgba(255, 255, 255, ${isDimmed ? 0.3 : 0.85})`;
         ctx.fillText(t(node.labelKey), node.x, node.y + r + 14);
       });
-
     };
 
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [dimensions, t]);
+  }, [dimensions, t, isMobile]);
 
+  // ─── MOBILE LAYOUT ───
+  if (isMobile) {
+    return (
+      <div ref={containerRef} className="relative w-full">
+        {/* Legend */}
+        <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground mb-3">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-prism-cyan" />
+            {t("net.legend.tech")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-prism-amber" />
+            {t("net.legend.biz")}
+          </span>
+        </div>
+
+        {/* Agent grid - 3 columns */}
+        <div className="grid grid-cols-3 gap-1.5">
+          {WORKFLOW_ORDER.map((agentId, i) => {
+            const def = AGENT_DEFS.find((a) => a.id === agentId)!;
+            const isActive = displayedId === agentId;
+            return (
+              <button
+                key={agentId}
+                onClick={() => {
+                  setActiveAgent(i);
+                  setHoveredAgent(null);
+                  startTimer();
+                }}
+                className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-300"
+                style={{
+                  backgroundColor: isActive ? def.color + "15" : "transparent",
+                  border: `1px solid ${isActive ? def.color + "40" : "transparent"}`,
+                }}
+              >
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
+                  style={{
+                    backgroundColor: def.color + (isActive ? "20" : "08"),
+                    border: `1.5px solid ${def.color}${isActive ? "70" : "25"}`,
+                    boxShadow: isActive ? `0 0 12px ${def.color}30` : "none",
+                  }}
+                >
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: def.color, opacity: isActive ? 1 : 0.5 }}
+                  />
+                </div>
+                <span
+                  className="text-[10px] font-mono text-center leading-tight"
+                  style={{ color: isActive ? def.color : "rgba(255,255,255,0.5)" }}
+                >
+                  {t(def.labelKey)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom info panel */}
+        <div
+          className="mt-3 rounded-lg p-3 transition-all duration-500 border"
+          style={{
+            borderColor: displayedDef.color + "40",
+            backgroundColor: displayedDef.color + "08",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <div
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: displayedDef.color }}
+            />
+            <span
+              className="text-sm font-display font-bold"
+              style={{ color: displayedDef.color }}
+            >
+              {t(displayedDef.labelKey)}
+            </span>
+            <span className="text-xs text-muted-foreground font-mono">
+              · {t(displayedInfo.divKey)}
+            </span>
+          </div>
+          <p className="text-muted-foreground text-xs leading-relaxed mt-1.5">
+            {t(displayedInfo.roleKey)}
+          </p>
+
+          {/* Connected agents */}
+          <div className="flex items-center gap-1.5 mt-2 text-xs font-mono flex-wrap">
+            <span className="text-muted-foreground/60 text-[10px]">
+              {t("net.legend.tech") === "技术智能体" ? "协作:" : "Connects:"}
+            </span>
+            {CONNECTIONS
+              .filter((c) => c.from === displayedId || c.to === displayedId)
+              .map((c) => {
+                const otherId = c.from === displayedId ? c.to : c.from;
+                const otherDef = AGENT_DEFS.find((a) => a.id === otherId);
+                if (!otherDef) return null;
+                return (
+                  <span
+                    key={otherId}
+                    className="px-1 py-0.5 rounded text-[9px]"
+                    style={{
+                      color: otherDef.color,
+                      backgroundColor: otherDef.color + "15",
+                      border: `1px solid ${otherDef.color}25`,
+                    }}
+                  >
+                    {t(otherDef.labelKey)}
+                  </span>
+                );
+              })}
+          </div>
+
+          {/* Workflow indicator dots */}
+          <div className="flex items-center gap-1 mt-2.5">
+            {WORKFLOW_ORDER.map((agentId, i) => {
+              const def = AGENT_DEFS.find((a) => a.id === agentId)!;
+              const isActive = displayedId === agentId;
+              return (
+                <button
+                  key={agentId}
+                  onClick={() => {
+                    setActiveAgent(i);
+                    setHoveredAgent(null);
+                    startTimer();
+                  }}
+                  className="transition-all duration-300"
+                  style={{
+                    width: isActive ? 16 : 5,
+                    height: 5,
+                    borderRadius: 3,
+                    backgroundColor: isActive ? def.color : def.color + "40",
+                  }}
+                  aria-label={agentId}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── DESKTOP LAYOUT ───
   return (
     <div className="relative w-full">
-      {/* Canvas area */}
       <div ref={containerRef} className="relative w-full h-[380px] sm:h-[420px]">
         <canvas
           ref={canvasRef}
@@ -393,7 +527,6 @@ export default function AgentNetwork() {
           onMouseLeave={handleMouseLeave}
           className="w-full h-full"
         />
-        {/* Legend */}
         <div className="absolute top-3 right-3 flex items-center gap-4 text-[10px] font-mono text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-prism-cyan" />
@@ -406,7 +539,7 @@ export default function AgentNetwork() {
         </div>
       </div>
 
-      {/* Bottom info panel — synced with active/hovered agent */}
+      {/* Bottom info panel */}
       <div
         className="mt-3 rounded-lg p-4 transition-all duration-500 border"
         style={{
@@ -435,7 +568,6 @@ export default function AgentNetwork() {
           {t(displayedInfo.roleKey)}
         </p>
 
-        {/* Connected agents */}
         <div className="flex items-center gap-2 mt-2.5 text-xs font-mono flex-wrap">
           <span className="text-muted-foreground/60">
             {t("net.legend.tech") === "技术智能体" ? "协作:" : "Connects:"}
@@ -462,7 +594,6 @@ export default function AgentNetwork() {
             })}
         </div>
 
-        {/* Workflow indicator dots */}
         <div className="flex items-center gap-1.5 mt-3">
           {WORKFLOW_ORDER.map((agentId, i) => {
             const def = AGENT_DEFS.find((a) => a.id === agentId)!;

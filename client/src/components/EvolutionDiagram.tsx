@@ -1,7 +1,8 @@
 /*
  * EvolutionDiagram — SVG-based 3-tier evolution visualization
  * Compact layout: SVG + info panel visible together in one viewport
- * Concentric rings with auto-cycling info panel + hover interaction
+ * Concentric rings with auto-cycling info panel + hover/touch interaction
+ * Mobile: simplified card-based layout; Desktop: full SVG rings
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useI18n } from "@/contexts/I18nContext";
@@ -46,6 +47,7 @@ export default function EvolutionDiagram() {
   const { t } = useI18n();
   const [hoveredTier, setHoveredTier] = useState<number | null>(null);
   const [activeTier, setActiveTier] = useState<number>(0);
+  const [isMobile, setIsMobile] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
@@ -54,12 +56,20 @@ export default function EvolutionDiagram() {
 
   const displayedTier = hoveredTier !== null ? hoveredTier : activeTier;
 
-  // Spacious dimensions — rings well separated, still compact overall
+  // Desktop SVG dimensions
   const W = 800;
   const H = 320;
   const CX = W / 2;
   const CY = 155;
-  const ELLIPSE_RATIO = 0.48; // slightly rounder ellipses for better separation
+  const ELLIPSE_RATIO = 0.48;
+
+  // Check mobile
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -85,7 +95,13 @@ export default function EvolutionDiagram() {
     startTimer();
   }, [startTimer]);
 
-  // Visibility observer — pause animation when off-screen
+  const handleTap = useCallback((i: number) => {
+    setActiveTier(i);
+    setHoveredTier(null);
+    startTimer();
+  }, [startTimer]);
+
+  // Visibility observer
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -97,8 +113,9 @@ export default function EvolutionDiagram() {
     return () => obs.disconnect();
   }, []);
 
-  // Canvas particle animation
+  // Canvas particle animation (desktop only)
   useEffect(() => {
+    if (isMobile) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -191,20 +208,179 @@ export default function EvolutionDiagram() {
         ctx.fillStyle = `rgba(0,212,255,${alpha})`;
         ctx.fill();
       });
-
     }
 
     animate();
     return () => cancelAnimationFrame(animRef.current);
-  }, []);
+  }, [isMobile]);
 
   function ellipsePath(rx: number, ry: number): string {
     return `M${CX - rx},${CY} A${rx},${ry} 0 1,1 ${CX + rx},${CY} A${rx},${ry} 0 1,1 ${CX - rx},${CY}`;
   }
 
+  // ─── MOBILE VERTICAL LAYOUT ───
+  if (isMobile) {
+    return (
+      <div ref={containerRef} className="relative w-full">
+        {/* Compact visual: small concentric circles */}
+        <div className="flex justify-center mb-5">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <defs>
+              <radialGradient id="evo-m-center" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#00d4ff" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <circle cx="100" cy="100" r="25" fill="url(#evo-m-center)" />
+            {/* Center hexagon */}
+            {(() => {
+              const r = 14;
+              const pts: string[] = [];
+              for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i - Math.PI / 2;
+                pts.push(`${i === 0 ? "M" : "L"}${100 + r * Math.cos(angle)},${100 + r * Math.sin(angle)}`);
+              }
+              return (
+                <>
+                  <path d={pts.join(" ") + " Z"} fill="#00d4ff" opacity={0.08} />
+                  <path d={pts.join(" ") + " Z"} fill="none" stroke="#00d4ff" strokeWidth={1.2} opacity={0.6} />
+                </>
+              );
+            })()}
+            <text x="100" y="98" textAnchor="middle" fill="#00d4ff" fontSize="7" fontFamily="'JetBrains Mono', monospace" fontWeight="bold" opacity={0.8}>PRISM</text>
+            <text x="100" y="107" textAnchor="middle" fill="#8892b0" fontSize="5.5" fontFamily="'JetBrains Mono', monospace" opacity={0.6}>CORE</text>
+
+            {/* Three rings */}
+            {TIERS.map((tier, i) => {
+              const r = 40 + i * 28;
+              const isActive = displayedTier === i;
+              return (
+                <g key={i} onClick={() => handleTap(i)} style={{ cursor: "pointer" }}>
+                  <circle cx="100" cy="100" r={r} fill="none" stroke={tier.color} strokeWidth={isActive ? 2 : 0.8} opacity={isActive ? 0.7 : 0.2} style={{ transition: "all 0.4s ease" }} />
+                  {/* Level badge */}
+                  <circle cx={100 + r * Math.cos(-Math.PI / 2 + (i - 1) * 0.5)} cy={100 + r * Math.sin(-Math.PI / 2 + (i - 1) * 0.5)} r={isActive ? 12 : 9} fill={tier.color} opacity={isActive ? 0.15 : 0.06} style={{ transition: "all 0.4s ease" }} />
+                  <circle cx={100 + r * Math.cos(-Math.PI / 2 + (i - 1) * 0.5)} cy={100 + r * Math.sin(-Math.PI / 2 + (i - 1) * 0.5)} r={isActive ? 12 : 9} fill="none" stroke={tier.color} strokeWidth={isActive ? 1.5 : 0.8} opacity={isActive ? 0.8 : 0.3} style={{ transition: "all 0.4s ease" }} />
+                  <text x={100 + r * Math.cos(-Math.PI / 2 + (i - 1) * 0.5)} y={100 + r * Math.sin(-Math.PI / 2 + (i - 1) * 0.5) + 3} textAnchor="middle" fill={tier.color} fontSize="7" fontFamily="'JetBrains Mono', monospace" fontWeight="bold" opacity={isActive ? 1 : 0.5}>
+                    {tier.level}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Evolution arrows */}
+            {[0, 1].map((i) => {
+              const r1 = 40 + i * 28;
+              const r2 = 40 + (i + 1) * 28;
+              const midR = (r1 + r2) / 2;
+              const angle = Math.PI * 0.75 + i * 0.4;
+              return (
+                <g key={`arrow-${i}`}>
+                  <circle cx={100 + midR * Math.cos(angle)} cy={100 + midR * Math.sin(angle)} r={4} fill={TIERS[i + 1].color} opacity={0.08} />
+                  <text x={100 + midR * Math.cos(angle)} y={100 + midR * Math.sin(angle) + 3} textAnchor="middle" fill={TIERS[i + 1].color} fontSize="8" fontWeight="bold" opacity={0.5}>↑</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Tier cards */}
+        <div className="space-y-1.5">
+          {TIERS.map((tier, i) => {
+            const isActive = displayedTier === i;
+            return (
+              <button
+                key={i}
+                onClick={() => handleTap(i)}
+                className="w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-300 text-left"
+                style={{
+                  backgroundColor: isActive ? tier.color + "12" : "transparent",
+                  borderLeft: `3px solid ${isActive ? tier.color : tier.color + "30"}`,
+                }}
+              >
+                <div
+                  className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center"
+                  style={{
+                    backgroundColor: tier.color + (isActive ? "20" : "08"),
+                    border: `1.5px solid ${tier.color}${isActive ? "60" : "25"}`,
+                  }}
+                >
+                  <span className="text-xs font-mono font-bold" style={{ color: tier.color }}>
+                    {tier.level}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <span
+                    className="text-sm font-display font-semibold block"
+                    style={{ color: isActive ? tier.color : "rgba(255,255,255,0.7)" }}
+                  >
+                    {t(tier.nameKey)}
+                  </span>
+                  {isActive && (
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      {t(tier.descKey)}
+                    </p>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Metrics for active tier */}
+        <div
+          className="mt-3 rounded-lg p-3 transition-all duration-500 border"
+          style={{
+            borderColor: TIERS[displayedTier].color + "40",
+            backgroundColor: TIERS[displayedTier].color + "08",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className="text-xs font-mono font-bold px-2 py-0.5 rounded"
+              style={{
+                color: TIERS[displayedTier].color,
+                backgroundColor: TIERS[displayedTier].color + "18",
+                border: `1px solid ${TIERS[displayedTier].color}30`,
+              }}
+            >
+              {TIERS[displayedTier].level}
+            </span>
+            <span className="text-sm font-display font-bold" style={{ color: TIERS[displayedTier].color }}>
+              {t(TIERS[displayedTier].nameKey)}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {TIERS[displayedTier].metricKeys.map((mk, i) => (
+              <div key={i} className="flex items-center gap-1.5 text-xs font-mono">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: TIERS[displayedTier].color + "90" }} />
+                <span className="text-muted-foreground">{t(mk)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 mt-2.5">
+            {TIERS.map((tier, i) => (
+              <button
+                key={i}
+                onClick={() => handleTap(i)}
+                className="transition-all duration-300"
+                style={{
+                  width: displayedTier === i ? 24 : 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: displayedTier === i ? tier.color : tier.color + "40",
+                }}
+                aria-label={`Tier ${tier.level}`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── DESKTOP LAYOUT ───
   return (
     <div ref={containerRef} className="relative w-full">
-      {/* SVG diagram — compact, no extra whitespace */}
       <div className="overflow-x-auto">
         <div className="min-w-[500px] relative" style={{ aspectRatio: `${W}/${H}` }}>
           <svg
@@ -259,7 +435,6 @@ export default function EvolutionDiagram() {
               );
             })()}
 
-            {/* Center label */}
             <text x={CX} y={CY - 2} textAnchor="middle" fill="#00d4ff" fontSize="7" fontFamily="'JetBrains Mono', monospace" fontWeight="bold" opacity={0.8}>
               PRISM
             </text>
@@ -274,12 +449,10 @@ export default function EvolutionDiagram() {
               const ry = tier.ringRadius * ELLIPSE_RATIO;
               const filterName = i === 0 ? "evo-glow-cyan" : i === 1 ? "evo-glow-purple" : "evo-glow-amber";
 
-              // Label badge position — stagger around the top
               const labelAngle = -Math.PI / 2 + (i - 1) * 0.45;
               const labelX = CX + rx * Math.cos(labelAngle);
               const labelY = CY + ry * Math.sin(labelAngle);
 
-              // Metric node positions
               const metricPositions = tier.metricKeys.map((_, mi) => {
                 const baseAngle = Math.PI / 4 + (mi * Math.PI * 2) / 3;
                 return {
@@ -295,37 +468,10 @@ export default function EvolutionDiagram() {
                   onMouseLeave={handleMouseLeave}
                   style={{ cursor: "pointer" }}
                 >
-                  {/* Main ring */}
-                  <path
-                    d={ellipsePath(rx, ry)}
-                    fill="none"
-                    stroke={tier.color}
-                    strokeWidth={isDisplayed ? 2 : 0.8}
-                    opacity={isDisplayed ? 0.7 : 0.2}
-                    strokeDasharray={isDisplayed ? "none" : "4,6"}
-                    filter={isDisplayed ? `url(#${filterName})` : undefined}
-                    style={{ transition: "all 0.5s ease" }}
-                  />
+                  <path d={ellipsePath(rx, ry)} fill="none" stroke={tier.color} strokeWidth={isDisplayed ? 2 : 0.8} opacity={isDisplayed ? 0.7 : 0.2} filter={isDisplayed ? `url(#${filterName})` : undefined} style={{ transition: "all 0.5s ease" }} />
+                  <path d={ellipsePath(rx - 5, ry - 2.25)} fill="none" stroke={tier.color} strokeWidth={0.3} opacity={isDisplayed ? 0.2 : 0.05} style={{ transition: "opacity 0.5s ease" }} />
+                  <path d={ellipsePath(rx, ry)} fill="none" stroke="transparent" strokeWidth={20} />
 
-                  {/* Inner ring for depth */}
-                  <path
-                    d={ellipsePath(rx - 5, ry - 2.25)}
-                    fill="none"
-                    stroke={tier.color}
-                    strokeWidth={0.3}
-                    opacity={isDisplayed ? 0.2 : 0.05}
-                    style={{ transition: "opacity 0.5s ease" }}
-                  />
-
-                  {/* Clickable hit area (invisible) */}
-                  <path
-                    d={ellipsePath(rx, ry)}
-                    fill="none"
-                    stroke="transparent"
-                    strokeWidth={20}
-                  />
-
-                  {/* Level badge */}
                   <circle cx={labelX} cy={labelY} r={isDisplayed ? 16 : 12} fill={tier.color} opacity={isDisplayed ? 0.15 : 0.06} style={{ transition: "all 0.4s ease" }} />
                   <circle cx={labelX} cy={labelY} r={isDisplayed ? 16 : 12} fill="none" stroke={tier.color} strokeWidth={isDisplayed ? 1.5 : 0.8} opacity={isDisplayed ? 0.8 : 0.3} style={{ transition: "all 0.4s ease" }} />
                   <text x={labelX} y={labelY - 1} textAnchor="middle" fill={tier.color} fontSize="8" fontFamily="'JetBrains Mono', monospace" fontWeight="bold" opacity={isDisplayed ? 1 : 0.5} style={{ transition: "opacity 0.4s ease" }}>
@@ -335,7 +481,6 @@ export default function EvolutionDiagram() {
                     {t(tier.nameKey)}
                   </text>
 
-                  {/* Metric nodes */}
                   {metricPositions.map((pos, mi) => (
                     <g key={mi}>
                       <circle cx={pos.x} cy={pos.y} r={isDisplayed ? 3.5 : 2} fill={tier.color} opacity={isDisplayed ? 0.6 : 0.2} style={{ transition: "all 0.4s ease" }} />
@@ -347,7 +492,6 @@ export default function EvolutionDiagram() {
                     </g>
                   ))}
 
-                  {/* Connecting line from center */}
                   <line x1={CX} y1={CY} x2={labelX} y2={labelY} stroke={tier.color} strokeWidth={isDisplayed ? 0.6 : 0.2} opacity={isDisplayed ? 0.25 : 0.06} strokeDasharray="3,4" style={{ transition: "all 0.5s ease" }} />
                 </g>
               );
@@ -371,7 +515,6 @@ export default function EvolutionDiagram() {
             })}
           </svg>
 
-          {/* Canvas overlay */}
           <canvas
             ref={canvasRef}
             width={W}
@@ -382,7 +525,7 @@ export default function EvolutionDiagram() {
         </div>
       </div>
 
-      {/* Info panel — tight spacing, directly below diagram */}
+      {/* Info panel */}
       <div
         className="mt-2 rounded-lg p-3 sm:p-4 transition-all duration-500 border"
         style={{
@@ -424,7 +567,7 @@ export default function EvolutionDiagram() {
           {TIERS.map((tier, i) => (
             <button
               key={i}
-              onClick={() => { setActiveTier(i); setHoveredTier(null); startTimer(); }}
+              onClick={() => handleTap(i)}
               className="transition-all duration-300"
               style={{
                 width: displayedTier === i ? 24 : 8,

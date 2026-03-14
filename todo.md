@@ -1,31 +1,28 @@
 # PRISM Landing Page Tasks
 
-- [x] 1. 添加 /docs 路由，创建基础文档页面框架
-- [x] 2. 添加 meta 描述和 Open Graph 图片，优化社交媒体分享
-- [x] 3. 在架构部分增加交互式动画，展示多智能体协作过程
-- [x] 4. 用代码绘制精确对应 4 层架构的 SVG 图，替换 AI 生成图片
-- [x] 5. 支持中英文版本，随语言切换自动更新标注
-- [x] 6. 集成到 ArchitectureSection 组件中
+## 移动端可视化图表优化
 
-## 性能优化
+### ArchitectureDiagram
+- [ ] SVG viewBox 和布局在小屏幕上自适应
+- [ ] 右侧信息面板在移动端改为下方堆叠
+- [ ] 文字大小在移动端可读
 
-### 代码分割与懒加载
-- [ ] React.lazy + Suspense 懒加载 Docs 页面
-- [ ] 懒加载重型可视化组件（ArchitectureDiagram, PipelineDiagram, EvolutionDiagram, AgentNetwork）
+### AgentNetwork
+- [ ] Canvas 尺寸和节点布局适配小屏幕
+- [ ] 底部信息面板在移动端优化间距
+- [ ] 触摸事件支持（替代 hover）
 
-### 移除未使用依赖
-- [ ] 移除 recharts (~200KB)
-- [ ] 移除 embla-carousel-react, react-day-picker, react-resizable-panels
-- [ ] 移除 react-hook-form, @hookform/resolvers, input-otp, cmdk
-- [ ] 移除 axios, streamdown, nanoid
+### PipelineDiagram
+- [ ] 6 阶段横向布局在移动端改为纵向或可滚动
+- [ ] 底部信息面板移动端优化
 
-### 移除未使用 UI 组件
-- [ ] 移除 calendar, carousel, chart, command, context-menu, drawer, menubar, navigation-menu, sidebar 等
+### EvolutionDiagram
+- [ ] 同心环 SVG 在移动端缩放适配
+- [ ] 底部信息面板移动端优化
 
-### 动画性能
-- [ ] Canvas 动画添加 IntersectionObserver，不可见时暂停 requestAnimationFrame
-- [ ] framer-motion 按需导入
-
-### 资源加载
-- [ ] Hero 背景图添加 preload
-- [ ] Vite manualChunks 配置优化 bundle 分割
+### 其他组件
+- [ ] Navbar 移动端汉堡菜单
+- [ ] Hero 区域移动端布局
+- [ ] Features 卡片移动端间距
+- [ ] QuickStart 代码块移动端滚动
+- [ ] Footer 移动端布局

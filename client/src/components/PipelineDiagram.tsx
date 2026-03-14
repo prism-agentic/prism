@@ -1,7 +1,8 @@
 /*
  * PipelineDiagram — SVG-based pipeline visualization
  * Precisely maps to the 6 phases + 5 quality gates with i18n support
- * Bottom info panel auto-cycles with active phase, also responds to hover
+ * Bottom info panel auto-cycles with active phase, also responds to hover/touch
+ * Mobile: vertical layout; Desktop: horizontal layout
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useI18n } from "@/contexts/I18nContext";
@@ -74,13 +75,14 @@ export default function PipelineDiagram() {
   const { t } = useI18n();
   const [hoveredPhase, setHoveredPhase] = useState<number | null>(null);
   const [activePhase, setActivePhase] = useState<number>(0);
+  const [isMobile, setIsMobile] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // The displayed phase: hover takes priority, otherwise auto-cycle
   const displayedPhase = hoveredPhase !== null ? hoveredPhase : activePhase;
 
+  // Desktop SVG dimensions
   const W = 960;
   const H = 320;
   const Y_CENTER = 140;
@@ -89,7 +91,14 @@ export default function PipelineDiagram() {
   const HEX_R = 38;
   const GATE_R = 12;
 
-  // Start / restart auto-cycle timer
+  // Check mobile
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -97,7 +106,6 @@ export default function PipelineDiagram() {
     }, 2500);
   }, []);
 
-  // Auto-cycle
   useEffect(() => {
     startTimer();
     return () => {
@@ -105,7 +113,6 @@ export default function PipelineDiagram() {
     };
   }, [startTimer]);
 
-  // When user hovers, pause auto-cycle; resume on leave
   const handleMouseEnter = useCallback((i: number) => {
     setHoveredPhase(i);
     if (timerRef.current) clearInterval(timerRef.current);
@@ -116,8 +123,15 @@ export default function PipelineDiagram() {
     startTimer();
   }, [startTimer]);
 
-  // Canvas particle animation
+  const handleTap = useCallback((i: number) => {
+    setActivePhase(i);
+    setHoveredPhase(null);
+    startTimer();
+  }, [startTimer]);
+
+  // Canvas particle animation (desktop only)
   useEffect(() => {
+    if (isMobile) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -136,8 +150,7 @@ export default function PipelineDiagram() {
     for (let i = 0; i < 5; i++) {
       for (let j = 0; j < 3; j++) {
         particles.push({
-          x: 0,
-          y: 0,
+          x: 0, y: 0,
           fromPhase: i,
           progress: Math.random(),
           speed: 0.003 + Math.random() * 0.004,
@@ -149,43 +162,188 @@ export default function PipelineDiagram() {
     function animate() {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       particles.forEach((p) => {
         p.progress += p.speed;
         if (p.progress > 1) p.progress = 0;
-
         const x1 = START_X + p.fromPhase * PHASE_SPACING + HEX_R + 5;
         const x2 = START_X + (p.fromPhase + 1) * PHASE_SPACING - HEX_R - 5;
         p.x = x1 + (x2 - x1) * p.progress;
         p.y = Y_CENTER + Math.sin(p.progress * Math.PI * 2) * 3;
-
         const alpha = Math.sin(p.progress * Math.PI) * 0.9;
         const color = PHASES[p.fromPhase].color;
         const r = parseInt(color.slice(1, 3), 16);
         const g = parseInt(color.slice(3, 5), 16);
         const b = parseInt(color.slice(5, 7), 16);
-
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 0.15})`;
         ctx.fill();
-
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
         ctx.fill();
       });
-
       animRef.current = requestAnimationFrame(animate);
     }
 
     animate();
     return () => cancelAnimationFrame(animRef.current);
-  }, []);
+  }, [isMobile]);
 
+  // ─── MOBILE VERTICAL LAYOUT ───
+  if (isMobile) {
+    return (
+      <div className="relative w-full">
+        {/* Vertical phase list */}
+        <div className="space-y-1">
+          {PHASES.map((phase, i) => {
+            const isDisplayed = displayedPhase === i;
+            const isPast = activePhase > i;
+            return (
+              <div key={i}>
+                {/* Phase card */}
+                <button
+                  onClick={() => handleTap(i)}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-300"
+                  style={{
+                    backgroundColor: isDisplayed ? phase.color + "12" : "transparent",
+                    borderLeft: `3px solid ${isDisplayed ? phase.color : phase.color + "30"}`,
+                  }}
+                >
+                  {/* Hex icon */}
+                  <div
+                    className="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center"
+                    style={{
+                      backgroundColor: phase.color + (isDisplayed ? "20" : "08"),
+                      border: `1.5px solid ${phase.color}${isDisplayed ? "60" : "25"}`,
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                      <path d={phase.icon} fill={phase.color} opacity={isDisplayed ? 1 : 0.5} />
+                    </svg>
+                  </div>
+
+                  {/* Phase info */}
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-[10px] font-mono font-bold"
+                        style={{ color: phase.color, opacity: isDisplayed ? 1 : 0.5 }}
+                      >
+                        0{i}
+                      </span>
+                      <span
+                        className="text-sm font-display font-semibold"
+                        style={{ color: isDisplayed ? phase.color : "rgba(255,255,255,0.7)" }}
+                      >
+                        {t(phase.nameKey)}
+                      </span>
+                    </div>
+                    {isDisplayed && (
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                        {t(phase.descKey)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Status indicator */}
+                  <div className="shrink-0">
+                    {isPast || isDisplayed ? (
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: isPast ? "#4ade8020" : phase.color + "20" }}
+                      >
+                        {isPast ? (
+                          <svg width="10" height="10" viewBox="0 0 24 24">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="#4ade80" />
+                          </svg>
+                        ) : (
+                          <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: phase.color }} />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border border-border/30" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Gate indicator between phases */}
+                {i < 5 && (
+                  <div className="flex items-center gap-2 ml-6 py-0.5">
+                    <div
+                      className="w-px h-4"
+                      style={{ backgroundColor: isPast ? "#4ade8060" : phase.color + "20" }}
+                    />
+                    <span
+                      className="text-[9px] font-mono"
+                      style={{ color: isPast ? "#4ade80" : "#8892b080" }}
+                    >
+                      GATE {i + 1} · {t(phase.gateKey)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Bottom info panel */}
+        <div
+          className="mt-4 rounded-lg p-3 transition-all duration-500 border"
+          style={{
+            borderColor: PHASES[displayedPhase].color + "40",
+            backgroundColor: PHASES[displayedPhase].color + "08",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="text-xs font-mono font-bold px-2 py-0.5 rounded shrink-0"
+              style={{
+                color: PHASES[displayedPhase].color,
+                backgroundColor: PHASES[displayedPhase].color + "18",
+                border: `1px solid ${PHASES[displayedPhase].color}30`,
+              }}
+            >
+              Phase {displayedPhase}
+            </span>
+            <span
+              className="text-sm font-display font-bold"
+              style={{ color: PHASES[displayedPhase].color }}
+            >
+              {t(PHASES[displayedPhase].nameKey)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-2 text-xs font-mono">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400/80 animate-pulse" />
+            <span className="text-green-400/70">
+              Gate: {t(PHASES[displayedPhase].gateKey)}
+            </span>
+          </div>
+          {/* Phase indicator dots */}
+          <div className="flex items-center gap-1.5 mt-2.5">
+            {PHASES.map((phase, i) => (
+              <button
+                key={i}
+                onClick={() => handleTap(i)}
+                className="transition-all duration-300"
+                style={{
+                  width: displayedPhase === i ? 20 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: displayedPhase === i ? phase.color : phase.color + "40",
+                }}
+                aria-label={`Phase ${i}`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── DESKTOP HORIZONTAL LAYOUT ───
   return (
     <div className="relative w-full">
-      {/* Diagram area */}
       <div className="overflow-x-auto">
         <div className="min-w-[800px]" style={{ aspectRatio: `${W}/${H}` }}>
           <svg
@@ -198,19 +356,13 @@ export default function PipelineDiagram() {
                 <feGaussianBlur stdDeviation="5" result="blur" />
                 <feFlood floodColor="#00d4ff" floodOpacity="0.6" />
                 <feComposite in2="blur" operator="in" />
-                <feMerge>
-                  <feMergeNode />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
+                <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
               </filter>
               <filter id="pipe-glow-amber" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="5" result="blur" />
                 <feFlood floodColor="#ffb347" floodOpacity="0.6" />
                 <feComposite in2="blur" operator="in" />
-                <feMerge>
-                  <feMergeNode />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
+                <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
               </filter>
               <linearGradient id="pipe-line-grad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.6" />
@@ -229,13 +381,9 @@ export default function PipelineDiagram() {
 
             {/* Main connection line */}
             <line
-              x1={START_X + HEX_R}
-              y1={Y_CENTER}
-              x2={START_X + 5 * PHASE_SPACING - HEX_R}
-              y2={Y_CENTER}
-              stroke="url(#pipe-line-grad)"
-              strokeWidth={1.5}
-              strokeDasharray="6,4"
+              x1={START_X + HEX_R} y1={Y_CENTER}
+              x2={START_X + 5 * PHASE_SPACING - HEX_R} y2={Y_CENTER}
+              stroke="url(#pipe-line-grad)" strokeWidth={1.5} strokeDasharray="6,4"
             />
 
             {/* Render phases */}
@@ -252,125 +400,35 @@ export default function PipelineDiagram() {
                   onMouseLeave={handleMouseLeave}
                   style={{ cursor: "pointer" }}
                 >
-                  {/* Hexagon background */}
-                  <path
-                    d={hexPath(cx, Y_CENTER, HEX_R)}
-                    fill={phase.color}
-                    opacity={isDisplayed ? 0.15 : 0.04}
-                    style={{ transition: "opacity 0.3s ease" }}
-                  />
+                  <path d={hexPath(cx, Y_CENTER, HEX_R)} fill={phase.color} opacity={isDisplayed ? 0.15 : 0.04} style={{ transition: "opacity 0.3s ease" }} />
+                  <path d={hexPath(cx, Y_CENTER, HEX_R)} fill="none" stroke={phase.color} strokeWidth={isDisplayed ? 2.5 : 1.5} opacity={isDisplayed ? 1 : isPast ? 0.7 : 0.4} filter={isDisplayed ? `url(#${filterName})` : undefined} style={{ transition: "all 0.3s ease" }} />
+                  <path d={hexPath(cx, Y_CENTER, HEX_R * 0.6)} fill="none" stroke={phase.color} strokeWidth={0.5} opacity={isDisplayed ? 0.4 : 0.15} style={{ transition: "opacity 0.3s ease" }} />
 
-                  {/* Hexagon border */}
-                  <path
-                    d={hexPath(cx, Y_CENTER, HEX_R)}
-                    fill="none"
-                    stroke={phase.color}
-                    strokeWidth={isDisplayed ? 2.5 : 1.5}
-                    opacity={isDisplayed ? 1 : isPast ? 0.7 : 0.4}
-                    filter={isDisplayed ? `url(#${filterName})` : undefined}
-                    style={{ transition: "all 0.3s ease" }}
-                  />
-
-                  {/* Inner hexagon */}
-                  <path
-                    d={hexPath(cx, Y_CENTER, HEX_R * 0.6)}
-                    fill="none"
-                    stroke={phase.color}
-                    strokeWidth={0.5}
-                    opacity={isDisplayed ? 0.4 : 0.15}
-                    style={{ transition: "opacity 0.3s ease" }}
-                  />
-
-                  {/* Icon */}
                   <g transform={`translate(${cx - 12}, ${Y_CENTER - 12}) scale(1)`}>
-                    <path
-                      d={phase.icon}
-                      fill={phase.color}
-                      opacity={isDisplayed ? 1 : 0.6}
-                      style={{ transition: "opacity 0.3s ease" }}
-                    />
+                    <path d={phase.icon} fill={phase.color} opacity={isDisplayed ? 1 : 0.5} style={{ transition: "opacity 0.3s ease" }} />
                   </g>
 
-                  {/* Phase number */}
-                  <text
-                    x={cx}
-                    y={Y_CENTER - HEX_R - 14}
-                    textAnchor="middle"
-                    fill={phase.color}
-                    fontSize="10"
-                    fontFamily="'JetBrains Mono', monospace"
-                    fontWeight="bold"
-                    opacity={isDisplayed ? 0.8 : 0.4}
-                    style={{ transition: "opacity 0.3s ease" }}
-                  >
+                  <text x={cx} y={Y_CENTER - HEX_R - 14} textAnchor="middle" fill={phase.color} fontSize="10" fontFamily="'JetBrains Mono', monospace" fontWeight="bold" opacity={isDisplayed ? 0.8 : 0.4} style={{ transition: "opacity 0.3s ease" }}>
                     {`0${i}`}
                   </text>
 
-                  {/* Phase name */}
-                  <text
-                    x={cx}
-                    y={Y_CENTER + HEX_R + 22}
-                    textAnchor="middle"
-                    fill={phase.color}
-                    fontSize="12"
-                    fontFamily="'Space Grotesk', sans-serif"
-                    fontWeight="700"
-                    opacity={isDisplayed ? 1 : 0.7}
-                    style={{ transition: "opacity 0.3s ease" }}
-                  >
+                  <text x={cx} y={Y_CENTER + HEX_R + 22} textAnchor="middle" fill={phase.color} fontSize="12" fontFamily="'Space Grotesk', sans-serif" fontWeight="700" opacity={isDisplayed ? 1 : 0.7} style={{ transition: "opacity 0.3s ease" }}>
                     {t(phase.nameKey)}
                   </text>
 
-                  {/* Phase description — visible when this phase is displayed */}
-                  <text
-                    x={cx}
-                    y={Y_CENTER + HEX_R + 40}
-                    textAnchor="middle"
-                    fill="#8892b0"
-                    fontSize="9"
-                    fontFamily="'Space Grotesk', sans-serif"
-                    opacity={isDisplayed ? 0.8 : 0}
-                    style={{ transition: "opacity 0.4s ease" }}
-                  >
+                  <text x={cx} y={Y_CENTER + HEX_R + 40} textAnchor="middle" fill="#8892b0" fontSize="9" fontFamily="'Space Grotesk', sans-serif" opacity={isDisplayed ? 0.8 : 0} style={{ transition: "opacity 0.4s ease" }}>
                     {t(phase.descKey)}
                   </text>
 
-                  {/* Progress bar */}
-                  <rect
-                    x={cx - 30}
-                    y={Y_CENTER + HEX_R + 48}
-                    width={60}
-                    height={3}
-                    rx={1.5}
-                    fill={phase.color}
-                    opacity={0.1}
-                  />
-                  <rect
-                    x={cx - 30}
-                    y={Y_CENTER + HEX_R + 48}
-                    width={isDisplayed || isPast ? 60 : 0}
-                    height={3}
-                    rx={1.5}
-                    fill={phase.color === "#00d4ff" ? "url(#progress-cyan)" : "url(#progress-amber)"}
-                    opacity={0.7}
-                    style={{ transition: "width 0.8s ease" }}
-                  />
+                  <rect x={cx - 30} y={Y_CENTER + HEX_R + 48} width={60} height={3} rx={1.5} fill={phase.color} opacity={0.1} />
+                  <rect x={cx - 30} y={Y_CENTER + HEX_R + 48} width={isDisplayed || isPast ? 60 : 0} height={3} rx={1.5} fill={phase.color === "#00d4ff" ? "url(#progress-cyan)" : "url(#progress-amber)"} opacity={0.7} style={{ transition: "width 0.8s ease" }} />
 
-                  {/* Corner dots */}
                   {Array.from({ length: 6 }).map((_, j) => {
                     const angle = (Math.PI / 3) * j - Math.PI / 2;
                     const px = cx + HEX_R * Math.cos(angle);
                     const py = Y_CENTER + HEX_R * Math.sin(angle);
                     return (
-                      <circle
-                        key={j}
-                        cx={px}
-                        cy={py}
-                        r={isDisplayed ? 3 : 2}
-                        fill={phase.color}
-                        opacity={isDisplayed ? 0.9 : 0.4}
-                        style={{ transition: "all 0.3s ease" }}
-                      />
+                      <circle key={j} cx={px} cy={py} r={isDisplayed ? 3 : 2} fill={phase.color} opacity={isDisplayed ? 0.9 : 0.4} style={{ transition: "all 0.3s ease" }} />
                     );
                   })}
                 </g>
@@ -385,66 +443,19 @@ export default function PipelineDiagram() {
 
               return (
                 <g key={`gate-${i}`}>
-                  <rect
-                    x={x - GATE_R}
-                    y={Y_CENTER - GATE_R}
-                    width={GATE_R * 2}
-                    height={GATE_R * 2}
-                    rx={3}
-                    fill={gateColor}
-                    opacity={isGatePassed ? 0.15 : 0.05}
-                    transform={`rotate(45, ${x}, ${Y_CENTER})`}
-                    style={{ transition: "opacity 0.5s ease" }}
-                  />
-                  <rect
-                    x={x - GATE_R}
-                    y={Y_CENTER - GATE_R}
-                    width={GATE_R * 2}
-                    height={GATE_R * 2}
-                    rx={3}
-                    fill="none"
-                    stroke={gateColor}
-                    strokeWidth={isGatePassed ? 1.5 : 0.8}
-                    opacity={isGatePassed ? 0.9 : 0.3}
-                    transform={`rotate(45, ${x}, ${Y_CENTER})`}
-                    style={{ transition: "all 0.5s ease" }}
-                  />
-
+                  <rect x={x - GATE_R} y={Y_CENTER - GATE_R} width={GATE_R * 2} height={GATE_R * 2} rx={3} fill={gateColor} opacity={isGatePassed ? 0.15 : 0.05} transform={`rotate(45, ${x}, ${Y_CENTER})`} style={{ transition: "opacity 0.5s ease" }} />
+                  <rect x={x - GATE_R} y={Y_CENTER - GATE_R} width={GATE_R * 2} height={GATE_R * 2} rx={3} fill="none" stroke={gateColor} strokeWidth={isGatePassed ? 1.5 : 0.8} opacity={isGatePassed ? 0.9 : 0.3} transform={`rotate(45, ${x}, ${Y_CENTER})`} style={{ transition: "all 0.5s ease" }} />
                   {isGatePassed ? (
                     <g transform={`translate(${x - 6}, ${Y_CENTER - 6}) scale(0.5)`}>
-                      <path
-                        d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
-                        fill="#4ade80"
-                        opacity={0.9}
-                      />
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="#4ade80" opacity={0.9} />
                     </g>
                   ) : (
                     <circle cx={x} cy={Y_CENTER} r={2} fill={gateColor} opacity={0.4} />
                   )}
-
-                  <text
-                    x={x}
-                    y={Y_CENTER + GATE_R + 24}
-                    textAnchor="middle"
-                    fill={isGatePassed ? "#4ade80" : "#8892b0"}
-                    fontSize="8"
-                    fontFamily="'JetBrains Mono', monospace"
-                    opacity={isGatePassed ? 0.9 : 0.4}
-                    style={{ transition: "all 0.5s ease" }}
-                  >
+                  <text x={x} y={Y_CENTER + GATE_R + 24} textAnchor="middle" fill={isGatePassed ? "#4ade80" : "#8892b0"} fontSize="8" fontFamily="'JetBrains Mono', monospace" opacity={isGatePassed ? 0.9 : 0.4} style={{ transition: "all 0.5s ease" }}>
                     {`GATE ${i + 1}`}
                   </text>
-
-                  <text
-                    x={x}
-                    y={Y_CENTER + GATE_R + 36}
-                    textAnchor="middle"
-                    fill={isGatePassed ? "#4ade80" : "#8892b0"}
-                    fontSize="7"
-                    fontFamily="'Space Grotesk', sans-serif"
-                    opacity={isGatePassed ? 0.7 : 0.3}
-                    style={{ transition: "all 0.5s ease" }}
-                  >
+                  <text x={x} y={Y_CENTER + GATE_R + 36} textAnchor="middle" fill={isGatePassed ? "#4ade80" : "#8892b0"} fontSize="7" fontFamily="'Space Grotesk', sans-serif" opacity={isGatePassed ? 0.7 : 0.3} style={{ transition: "all 0.5s ease" }}>
                     {t(PHASES[i].gateKey)}
                   </text>
                 </g>
@@ -453,13 +464,9 @@ export default function PipelineDiagram() {
 
             {/* Scanning line */}
             <line
-              x1={START_X + displayedPhase * PHASE_SPACING}
-              y1={Y_CENTER - 55}
-              x2={START_X + displayedPhase * PHASE_SPACING}
-              y2={Y_CENTER + 55}
-              stroke={displayedPhase < 3 ? "#00d4ff" : "#ffb347"}
-              strokeWidth={0.5}
-              opacity={0.2}
+              x1={START_X + displayedPhase * PHASE_SPACING} y1={Y_CENTER - 55}
+              x2={START_X + displayedPhase * PHASE_SPACING} y2={Y_CENTER + 55}
+              stroke={displayedPhase < 3 ? "#00d4ff" : "#ffb347"} strokeWidth={0.5} opacity={0.2}
               style={{ transition: "all 1s ease" }}
             />
           </svg>
@@ -475,7 +482,7 @@ export default function PipelineDiagram() {
         </div>
       </div>
 
-      {/* Bottom info panel — always visible, synced with active/hovered phase */}
+      {/* Bottom info panel */}
       <div
         className="mt-4 rounded-lg p-4 transition-all duration-500 border"
         style={{
@@ -494,10 +501,7 @@ export default function PipelineDiagram() {
           >
             Phase {displayedPhase}
           </span>
-          <span
-            className="text-base font-display font-bold shrink-0"
-            style={{ color: PHASES[displayedPhase].color }}
-          >
+          <span className="text-base font-display font-bold shrink-0" style={{ color: PHASES[displayedPhase].color }}>
             {t(PHASES[displayedPhase].nameKey)}
           </span>
           <span className="text-muted-foreground text-xs hidden sm:inline">—</span>
@@ -511,17 +515,11 @@ export default function PipelineDiagram() {
             Gate: {t(PHASES[displayedPhase].gateKey)}
           </span>
         </div>
-
-        {/* Phase indicator dots */}
         <div className="flex items-center gap-1.5 mt-3">
           {PHASES.map((phase, i) => (
             <button
               key={i}
-              onClick={() => {
-                setActivePhase(i);
-                setHoveredPhase(null);
-                startTimer();
-              }}
+              onClick={() => { setActivePhase(i); setHoveredPhase(null); startTimer(); }}
               className="transition-all duration-300"
               style={{
                 width: displayedPhase === i ? 20 : 6,
