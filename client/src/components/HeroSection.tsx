@@ -3,7 +3,8 @@
  * Full-bleed hero with constellation background, asymmetric layout
  */
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, GitBranch } from "lucide-react";
+import { ArrowRight, Sparkles, GitBranch, Zap } from "lucide-react";
+import { Link } from "wouter";
 import { useI18n } from "@/contexts/I18nContext";
 import { RichText } from "@/components/RichText";
 
@@ -77,6 +78,14 @@ export default function HeroSection() {
                 {t("hero.cta.clone")}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </a>
+              <Link
+                href="/dashboard"
+                className="group inline-flex items-center gap-2 px-6 py-3 bg-prism-amber text-prism-navy font-semibold rounded-lg hover:shadow-[0_0_30px_oklch(0.78_0.15_80/0.4)] transition-all duration-300"
+              >
+                <Zap className="w-4 h-4" />
+                {t("hero.cta.tryNow")}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
               <button
                 onClick={() => document.querySelector("#quickstart")?.scrollIntoView({ behavior: "smooth" })}
                 className="inline-flex items-center gap-2 px-6 py-3 border border-border text-foreground font-medium rounded-lg hover:border-prism-cyan/50 hover:text-prism-cyan transition-all duration-300"

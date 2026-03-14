@@ -10,6 +10,8 @@ import { I18nProvider } from "./contexts/I18nContext";
 // Lazy-load pages for code splitting
 const Home = lazy(() => import("./pages/Home"));
 const Docs = lazy(() => import("./pages/Docs"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Workspace = lazy(() => import("./pages/Workspace"));
 
 function LoadingFallback() {
   return (
@@ -28,6 +30,8 @@ function Router() {
       <Switch>
         <Route path={"/"} component={Home} />
         <Route path={"/docs"} component={Docs} />
+        <Route path={"/dashboard"} component={Dashboard} />
+        <Route path={"/workspace/:id"} component={Workspace} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
       </Switch>
