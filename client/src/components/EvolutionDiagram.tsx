@@ -1,6 +1,6 @@
 /*
  * EvolutionDiagram — SVG-based 3-tier evolution visualization
- * Precisely maps to L1 Micro-Tuning, L2 Distillation, L3 Architecture Review
+ * Compact layout: SVG + info panel visible together in one viewport
  * Concentric rings with auto-cycling info panel + hover interaction
  */
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -13,7 +13,6 @@ interface TierData {
   metricKeys: string[];
   color: string;
   ringRadius: number;
-  icon: string; // SVG path
 }
 
 const TIERS: TierData[] = [
@@ -23,9 +22,7 @@ const TIERS: TierData[] = [
     descKey: "evo.tier0.desc",
     metricKeys: ["evo.tier0.m0", "evo.tier0.m1", "evo.tier0.m2"],
     color: "#00d4ff",
-    ringRadius: 55,
-    // Cpu icon — gear/processor
-    icon: "M9 3V1H7v2H5.5A1.5 1.5 0 004 4.5V6H2v2h2v2H2v2h2v2H2v2h2v1.5A1.5 1.5 0 005.5 19H7v2h2v-2h2v2h2v-2h2v2h2v-2h1.5a1.5 1.5 0 001.5-1.5V17h2v-2h-2v-2h2v-2h-2V9h2V7h-2V4.5A1.5 1.5 0 0018.5 3H17V1h-2v2h-2V1h-2v2H9zm-3 3.5a.5.5 0 01.5-.5h11a.5.5 0 01.5.5v11a.5.5 0 01-.5.5h-11a.5.5 0 01-.5-.5v-11zM9 8v8h6V8H9z",
+    ringRadius: 50,
   },
   {
     level: "L2",
@@ -33,9 +30,7 @@ const TIERS: TierData[] = [
     descKey: "evo.tier1.desc",
     metricKeys: ["evo.tier1.m0", "evo.tier1.m1", "evo.tier1.m2"],
     color: "#a78bfa",
-    ringRadius: 100,
-    // Layers icon — stacked layers
-    icon: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5",
+    ringRadius: 88,
   },
   {
     level: "L3",
@@ -43,9 +38,7 @@ const TIERS: TierData[] = [
     descKey: "evo.tier2.desc",
     metricKeys: ["evo.tier2.m0", "evo.tier2.m1", "evo.tier2.m2"],
     color: "#ffb347",
-    ringRadius: 145,
-    // Network icon — connected nodes
-    icon: "M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1.27c.34-.6.99-1 1.73-1a2 2 0 110 4c-.74 0-1.39-.4-1.73-1H20a7 7 0 01-7 7v1.27c.6.34 1 .99 1 1.73a2 2 0 11-4 0c0-.74.4-1.39 1-1.73V23a7 7 0 01-7-7H2.73c-.34.6-.99 1-1.73 1a2 2 0 110-4c.74 0 1.39.4 1.73 1H4a7 7 0 017-7V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z",
+    ringRadius: 126,
   },
 ];
 
@@ -59,12 +52,13 @@ export default function EvolutionDiagram() {
 
   const displayedTier = hoveredTier !== null ? hoveredTier : activeTier;
 
-  const W = 700;
-  const H = 380;
+  // Compact dimensions — wider aspect ratio, less vertical space
+  const W = 800;
+  const H = 220;
   const CX = W / 2;
-  const CY = 175;
+  const CY = 110;
+  const ELLIPSE_RATIO = 0.45; // flatter ellipses
 
-  // Auto-cycle
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -89,7 +83,7 @@ export default function EvolutionDiagram() {
     startTimer();
   }, [startTimer]);
 
-  // Canvas particle animation — orbiting particles on each ring
+  // Canvas particle animation
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -106,19 +100,18 @@ export default function EvolutionDiagram() {
 
     const particles: OrbitalParticle[] = [];
     TIERS.forEach((tier, i) => {
-      const count = 6 + i * 4;
+      const count = 5 + i * 3;
       for (let j = 0; j < count; j++) {
         particles.push({
           tier: i,
           angle: (Math.PI * 2 * j) / count + Math.random() * 0.5,
           speed: (0.003 + Math.random() * 0.004) * (i === 0 ? 1.5 : i === 1 ? 1 : 0.7),
-          size: 1 + Math.random() * 1.5,
-          offset: (Math.random() - 0.5) * 8,
+          size: 1 + Math.random() * 1.2,
+          offset: (Math.random() - 0.5) * 6,
         });
       }
     });
 
-    // Rising energy particles from center
     interface RisingParticle {
       x: number;
       y: number;
@@ -128,14 +121,14 @@ export default function EvolutionDiagram() {
       size: number;
     }
     const risingParticles: RisingParticle[] = [];
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 10; i++) {
       risingParticles.push({
-        x: CX + (Math.random() - 0.5) * 30,
-        y: CY + (Math.random() - 0.5) * 30,
-        speed: 0.3 + Math.random() * 0.5,
+        x: CX + (Math.random() - 0.5) * 20,
+        y: CY + (Math.random() - 0.5) * 20,
+        speed: 0.2 + Math.random() * 0.4,
         life: Math.random() * 60,
-        maxLife: 60 + Math.random() * 40,
-        size: 0.5 + Math.random() * 1,
+        maxLife: 50 + Math.random() * 30,
+        size: 0.5 + Math.random() * 0.8,
       });
     }
 
@@ -143,12 +136,11 @@ export default function EvolutionDiagram() {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw orbital particles
       particles.forEach((p) => {
         p.angle += p.speed;
         const r = TIERS[p.tier].ringRadius + p.offset;
         const x = CX + r * Math.cos(p.angle);
-        const y = CY + r * Math.sin(p.angle) * 0.55; // Elliptical orbit
+        const y = CY + r * Math.sin(p.angle) * ELLIPSE_RATIO;
 
         const color = TIERS[p.tier].color;
         const cr = parseInt(color.slice(1, 3), 16);
@@ -156,32 +148,28 @@ export default function EvolutionDiagram() {
         const cb = parseInt(color.slice(5, 7), 16);
         const alpha = 0.3 + Math.sin(p.angle * 2) * 0.3;
 
-        // Glow
         ctx.beginPath();
-        ctx.arc(x, y, p.size * 3, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha * 0.12})`;
+        ctx.arc(x, y, p.size * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha * 0.1})`;
         ctx.fill();
 
-        // Core
         ctx.beginPath();
         ctx.arc(x, y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
         ctx.fill();
       });
 
-      // Draw rising energy particles
       risingParticles.forEach((p) => {
         p.life++;
         if (p.life > p.maxLife) {
           p.life = 0;
-          p.x = CX + (Math.random() - 0.5) * 30;
-          p.y = CY + (Math.random() - 0.5) * 30;
+          p.x = CX + (Math.random() - 0.5) * 20;
+          p.y = CY + (Math.random() - 0.5) * 20;
         }
         p.y -= p.speed;
-        p.x += Math.sin(p.life * 0.1) * 0.3;
-
+        p.x += Math.sin(p.life * 0.1) * 0.2;
         const progress = p.life / p.maxLife;
-        const alpha = Math.sin(progress * Math.PI) * 0.4;
+        const alpha = Math.sin(progress * Math.PI) * 0.35;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(0,212,255,${alpha})`;
@@ -195,60 +183,51 @@ export default function EvolutionDiagram() {
     return () => cancelAnimationFrame(animRef.current);
   }, []);
 
-  // Helper: draw elliptical ring path
   function ellipsePath(rx: number, ry: number): string {
     return `M${CX - rx},${CY} A${rx},${ry} 0 1,1 ${CX + rx},${CY} A${rx},${ry} 0 1,1 ${CX - rx},${CY}`;
   }
 
   return (
     <div className="relative w-full">
+      {/* SVG diagram — compact, no extra whitespace */}
       <div className="overflow-x-auto">
-        <div className="min-w-[600px]" style={{ aspectRatio: `${W}/${H}` }}>
+        <div className="min-w-[500px] relative" style={{ aspectRatio: `${W}/${H}` }}>
           <svg
             viewBox={`0 0 ${W} ${H}`}
             className="w-full h-full"
-            style={{ filter: "drop-shadow(0 0 20px rgba(0,212,255,0.06))" }}
+            style={{ filter: "drop-shadow(0 0 15px rgba(0,212,255,0.05))" }}
           >
             <defs>
               <filter id="evo-glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feGaussianBlur stdDeviation="4" result="blur" />
                 <feFlood floodColor="#00d4ff" floodOpacity="0.5" />
                 <feComposite in2="blur" operator="in" />
-                <feMerge>
-                  <feMergeNode />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
+                <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
               </filter>
               <filter id="evo-glow-purple" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feGaussianBlur stdDeviation="4" result="blur" />
                 <feFlood floodColor="#a78bfa" floodOpacity="0.5" />
                 <feComposite in2="blur" operator="in" />
-                <feMerge>
-                  <feMergeNode />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
+                <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
               </filter>
               <filter id="evo-glow-amber" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feGaussianBlur stdDeviation="4" result="blur" />
                 <feFlood floodColor="#ffb347" floodOpacity="0.5" />
                 <feComposite in2="blur" operator="in" />
-                <feMerge>
-                  <feMergeNode />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
+                <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
               </filter>
               <radialGradient id="evo-center-grad" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.15" />
+                <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.12" />
                 <stop offset="100%" stopColor="#00d4ff" stopOpacity="0" />
               </radialGradient>
             </defs>
 
             {/* Center glow */}
-            <circle cx={CX} cy={CY} r={35} fill="url(#evo-center-grad)" />
+            <circle cx={CX} cy={CY} r={28} fill="url(#evo-center-grad)" />
 
             {/* Center core hexagon */}
             {(() => {
-              const r = 22;
+              const r = 18;
               const pts: string[] = [];
               for (let i = 0; i < 6; i++) {
                 const angle = (Math.PI / 3) * i - Math.PI / 2;
@@ -266,43 +245,26 @@ export default function EvolutionDiagram() {
             })()}
 
             {/* Center label */}
-            <text
-              x={CX}
-              y={CY - 4}
-              textAnchor="middle"
-              fill="#00d4ff"
-              fontSize="8"
-              fontFamily="'JetBrains Mono', monospace"
-              fontWeight="bold"
-              opacity={0.8}
-            >
+            <text x={CX} y={CY - 2} textAnchor="middle" fill="#00d4ff" fontSize="7" fontFamily="'JetBrains Mono', monospace" fontWeight="bold" opacity={0.8}>
               PRISM
             </text>
-            <text
-              x={CX}
-              y={CY + 8}
-              textAnchor="middle"
-              fill="#8892b0"
-              fontSize="7"
-              fontFamily="'JetBrains Mono', monospace"
-              opacity={0.6}
-            >
+            <text x={CX} y={CY + 8} textAnchor="middle" fill="#8892b0" fontSize="6" fontFamily="'JetBrains Mono', monospace" opacity={0.6}>
               CORE
             </text>
 
-            {/* Concentric elliptical rings for each tier */}
+            {/* Concentric elliptical rings */}
             {TIERS.map((tier, i) => {
               const isDisplayed = displayedTier === i;
               const rx = tier.ringRadius;
-              const ry = tier.ringRadius * 0.55;
+              const ry = tier.ringRadius * ELLIPSE_RATIO;
               const filterName = i === 0 ? "evo-glow-cyan" : i === 1 ? "evo-glow-purple" : "evo-glow-amber";
 
-              // Place label nodes on the ring
-              const labelAngle = -Math.PI / 2 + (i * Math.PI) / 6; // Stagger labels
+              // Label badge position — stagger around the top
+              const labelAngle = -Math.PI / 2 + (i - 1) * 0.45;
               const labelX = CX + rx * Math.cos(labelAngle);
               const labelY = CY + ry * Math.sin(labelAngle);
 
-              // Place metric nodes around the ring
+              // Metric node positions
               const metricPositions = tier.metricKeys.map((_, mi) => {
                 const baseAngle = Math.PI / 4 + (mi * Math.PI * 2) / 3;
                 return {
@@ -318,7 +280,7 @@ export default function EvolutionDiagram() {
                   onMouseLeave={handleMouseLeave}
                   style={{ cursor: "pointer" }}
                 >
-                  {/* Ring path */}
+                  {/* Main ring */}
                   <path
                     d={ellipsePath(rx, ry)}
                     fill="none"
@@ -330,141 +292,71 @@ export default function EvolutionDiagram() {
                     style={{ transition: "all 0.5s ease" }}
                   />
 
-                  {/* Second ring (inner) for depth */}
+                  {/* Inner ring for depth */}
                   <path
-                    d={ellipsePath(rx - 6, ry - 3.3)}
+                    d={ellipsePath(rx - 5, ry - 2.25)}
                     fill="none"
                     stroke={tier.color}
                     strokeWidth={0.3}
-                    opacity={isDisplayed ? 0.25 : 0.06}
+                    opacity={isDisplayed ? 0.2 : 0.05}
                     style={{ transition: "opacity 0.5s ease" }}
                   />
 
-                  {/* Level badge on ring */}
-                  <circle
-                    cx={labelX}
-                    cy={labelY}
-                    r={isDisplayed ? 18 : 14}
-                    fill={tier.color}
-                    opacity={isDisplayed ? 0.15 : 0.06}
-                    style={{ transition: "all 0.4s ease" }}
-                  />
-                  <circle
-                    cx={labelX}
-                    cy={labelY}
-                    r={isDisplayed ? 18 : 14}
+                  {/* Clickable hit area (invisible) */}
+                  <path
+                    d={ellipsePath(rx, ry)}
                     fill="none"
-                    stroke={tier.color}
-                    strokeWidth={isDisplayed ? 1.5 : 0.8}
-                    opacity={isDisplayed ? 0.8 : 0.3}
-                    style={{ transition: "all 0.4s ease" }}
+                    stroke="transparent"
+                    strokeWidth={20}
                   />
-                  <text
-                    x={labelX}
-                    y={labelY - 2}
-                    textAnchor="middle"
-                    fill={tier.color}
-                    fontSize="9"
-                    fontFamily="'JetBrains Mono', monospace"
-                    fontWeight="bold"
-                    opacity={isDisplayed ? 1 : 0.5}
-                    style={{ transition: "opacity 0.4s ease" }}
-                  >
+
+                  {/* Level badge */}
+                  <circle cx={labelX} cy={labelY} r={isDisplayed ? 16 : 12} fill={tier.color} opacity={isDisplayed ? 0.15 : 0.06} style={{ transition: "all 0.4s ease" }} />
+                  <circle cx={labelX} cy={labelY} r={isDisplayed ? 16 : 12} fill="none" stroke={tier.color} strokeWidth={isDisplayed ? 1.5 : 0.8} opacity={isDisplayed ? 0.8 : 0.3} style={{ transition: "all 0.4s ease" }} />
+                  <text x={labelX} y={labelY - 1} textAnchor="middle" fill={tier.color} fontSize="8" fontFamily="'JetBrains Mono', monospace" fontWeight="bold" opacity={isDisplayed ? 1 : 0.5} style={{ transition: "opacity 0.4s ease" }}>
                     {tier.level}
                   </text>
-                  <text
-                    x={labelX}
-                    y={labelY + 8}
-                    textAnchor="middle"
-                    fill={tier.color}
-                    fontSize="6.5"
-                    fontFamily="'Space Grotesk', sans-serif"
-                    fontWeight="600"
-                    opacity={isDisplayed ? 0.8 : 0.35}
-                    style={{ transition: "opacity 0.4s ease" }}
-                  >
+                  <text x={labelX} y={labelY + 8} textAnchor="middle" fill={tier.color} fontSize="5.5" fontFamily="'Space Grotesk', sans-serif" fontWeight="600" opacity={isDisplayed ? 0.8 : 0.35} style={{ transition: "opacity 0.4s ease" }}>
                     {t(tier.nameKey)}
                   </text>
 
-                  {/* Metric nodes on ring */}
+                  {/* Metric nodes */}
                   {metricPositions.map((pos, mi) => (
                     <g key={mi}>
-                      <circle
-                        cx={pos.x}
-                        cy={pos.y}
-                        r={isDisplayed ? 4 : 2.5}
-                        fill={tier.color}
-                        opacity={isDisplayed ? 0.6 : 0.2}
-                        style={{ transition: "all 0.4s ease" }}
-                      />
+                      <circle cx={pos.x} cy={pos.y} r={isDisplayed ? 3.5 : 2} fill={tier.color} opacity={isDisplayed ? 0.6 : 0.2} style={{ transition: "all 0.4s ease" }} />
                       {isDisplayed && (
-                        <text
-                          x={pos.x}
-                          y={pos.y + (pos.y > CY ? 14 : -8)}
-                          textAnchor="middle"
-                          fill={tier.color}
-                          fontSize="7"
-                          fontFamily="'Space Grotesk', sans-serif"
-                          opacity={0.7}
-                        >
+                        <text x={pos.x} y={pos.y + (pos.y > CY ? 12 : -7)} textAnchor="middle" fill={tier.color} fontSize="6" fontFamily="'Space Grotesk', sans-serif" opacity={0.65}>
                           {t(tier.metricKeys[mi])}
                         </text>
                       )}
                     </g>
                   ))}
 
-                  {/* Connecting lines from center to ring label */}
-                  <line
-                    x1={CX}
-                    y1={CY}
-                    x2={labelX}
-                    y2={labelY}
-                    stroke={tier.color}
-                    strokeWidth={isDisplayed ? 0.8 : 0.3}
-                    opacity={isDisplayed ? 0.3 : 0.08}
-                    strokeDasharray="3,4"
-                    style={{ transition: "all 0.5s ease" }}
-                  />
+                  {/* Connecting line from center */}
+                  <line x1={CX} y1={CY} x2={labelX} y2={labelY} stroke={tier.color} strokeWidth={isDisplayed ? 0.6 : 0.2} opacity={isDisplayed ? 0.25 : 0.06} strokeDasharray="3,4" style={{ transition: "all 0.5s ease" }} />
                 </g>
               );
             })}
 
-            {/* Arrow indicators showing evolution direction: L1 → L2 → L3 */}
+            {/* Evolution direction arrows */}
             {[0, 1].map((i) => {
               const fromR = TIERS[i].ringRadius;
               const toR = TIERS[i + 1].ringRadius;
               const midR = (fromR + toR) / 2;
               const angle = Math.PI * 0.75 + i * 0.4;
               const ax = CX + midR * Math.cos(angle);
-              const ay = CY + midR * 0.55 * Math.sin(angle);
+              const ay = CY + midR * ELLIPSE_RATIO * Math.sin(angle);
               const arrowColor = TIERS[i + 1].color;
-
               return (
                 <g key={`arrow-${i}`}>
-                  <circle
-                    cx={ax}
-                    cy={ay}
-                    r={6}
-                    fill={arrowColor}
-                    opacity={0.08}
-                  />
-                  <text
-                    x={ax}
-                    y={ay + 3.5}
-                    textAnchor="middle"
-                    fill={arrowColor}
-                    fontSize="9"
-                    fontWeight="bold"
-                    opacity={0.5}
-                  >
-                    ↑
-                  </text>
+                  <circle cx={ax} cy={ay} r={5} fill={arrowColor} opacity={0.08} />
+                  <text x={ax} y={ay + 3} textAnchor="middle" fill={arrowColor} fontSize="8" fontWeight="bold" opacity={0.5}>↑</text>
                 </g>
               );
             })}
           </svg>
 
-          {/* Canvas overlay for particle effects */}
+          {/* Canvas overlay */}
           <canvas
             ref={canvasRef}
             width={W}
@@ -475,9 +367,9 @@ export default function EvolutionDiagram() {
         </div>
       </div>
 
-      {/* Bottom info panel — synced with active/hovered tier */}
+      {/* Info panel — tight spacing, directly below diagram */}
       <div
-        className="mt-4 rounded-lg p-4 transition-all duration-500 border"
+        className="mt-2 rounded-lg p-3 sm:p-4 transition-all duration-500 border"
         style={{
           borderColor: TIERS[displayedTier].color + "40",
           backgroundColor: TIERS[displayedTier].color + "08",
@@ -495,10 +387,7 @@ export default function EvolutionDiagram() {
             {TIERS[displayedTier].level}
           </span>
           <div className="flex-1">
-            <span
-              className="text-base font-display font-bold block mb-1"
-              style={{ color: TIERS[displayedTier].color }}
-            >
+            <span className="text-base font-display font-bold block mb-0.5" style={{ color: TIERS[displayedTier].color }}>
               {t(TIERS[displayedTier].nameKey)}
             </span>
             <span className="text-muted-foreground text-sm leading-relaxed block">
@@ -507,29 +396,20 @@ export default function EvolutionDiagram() {
           </div>
         </div>
 
-        {/* Metrics */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-2.5">
           {TIERS[displayedTier].metricKeys.map((mk, i) => (
             <div key={i} className="flex items-center gap-2 text-xs font-mono">
-              <div
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: TIERS[displayedTier].color + "90" }}
-              />
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: TIERS[displayedTier].color + "90" }} />
               <span className="text-muted-foreground">{t(mk)}</span>
             </div>
           ))}
         </div>
 
-        {/* Tier indicator dots */}
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2 mt-2.5">
           {TIERS.map((tier, i) => (
             <button
               key={i}
-              onClick={() => {
-                setActiveTier(i);
-                setHoveredTier(null);
-                startTimer();
-              }}
+              onClick={() => { setActiveTier(i); setHoveredTier(null); startTimer(); }}
               className="transition-all duration-300"
               style={{
                 width: displayedTier === i ? 24 : 8,
