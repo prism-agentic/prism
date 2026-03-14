@@ -1,13 +1,12 @@
 /*
  * PRISM Architecture Section — Neural Constellation Design
- * Showcases the layered architecture + interactive agent collaboration network
+ * Showcases the layered architecture with SVG diagram + interactive agent network
  */
 import { motion } from "framer-motion";
 import { useI18n } from "@/contexts/I18nContext";
 import { RichText } from "@/components/RichText";
 import AgentNetwork from "@/components/AgentNetwork";
-
-const ARCH_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-architecture-kbKQ8nXipHruTLeYyeezwM.webp";
+import ArchitectureDiagram from "@/components/ArchitectureDiagram";
 
 const LAYER_KEYS = [
   { nameKey: "arch.layer0.name", descKey: "arch.layer0.desc", isCyan: true },
@@ -41,9 +40,9 @@ export default function ArchitectureSection() {
           </p>
         </motion.div>
 
-        {/* Content: Image + Layers */}
+        {/* Content: SVG Diagram + Layers */}
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Architecture image */}
+          {/* Architecture SVG Diagram */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -51,13 +50,8 @@ export default function ArchitectureSection() {
             transition={{ duration: 0.7 }}
             className="relative"
           >
-            <div className="glass-card rounded-xl p-2 glow-amber">
-              <img
-                src={ARCH_IMG}
-                alt="PRISM Architecture"
-                className="rounded-lg w-full"
-                loading="lazy"
-              />
+            <div className="glass-card rounded-xl p-4 glow-amber">
+              <ArchitectureDiagram />
             </div>
           </motion.div>
 
