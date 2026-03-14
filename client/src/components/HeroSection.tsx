@@ -1,14 +1,17 @@
 /*
  * PRISM Hero Section — Neural Constellation Design
  * Full-bleed hero with constellation background, asymmetric layout
- * Text left, animated visual right
  */
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, GitBranch } from "lucide-react";
+import { useI18n } from "@/contexts/I18nContext";
+import { RichText } from "@/components/RichText";
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-hero-bg-ZapLqSCNvV2QuQ9Qbb2Wsk.webp";
 
 export default function HeroSection() {
+  const { t } = useI18n();
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background image */}
@@ -41,26 +44,25 @@ export default function HeroSection() {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-prism-cyan/30 bg-prism-cyan/5 text-prism-cyan text-sm font-mono"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              v0.2.0 — Open Source
+              {t("hero.badge")}
             </motion.div>
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold leading-[1.1] tracking-tight">
-              <span className="text-foreground">Agents That</span>
+              <span className="text-foreground">{t("hero.title.line1")}</span>
               <br />
-              <span className="text-gradient-cyan">Learn</span>
-              <span className="text-foreground">, </span>
-              <span className="text-gradient-amber">Evolve</span>
-              <span className="text-foreground">,</span>
-              <br />
-              <span className="text-foreground">& Ship</span>
+              <span className="text-gradient-cyan">{t("hero.title.learn")}</span>
+              <span className="text-foreground">{t("hero.title.comma")}</span>
+              <span className="text-gradient-amber">{t("hero.title.evolve")}</span>
+              <span className="text-foreground">{t("hero.title.line3")}</span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              PRISM is a <span className="text-foreground font-medium">self-evolving multi-agent framework</span> that
-              orchestrates specialized AI agents through quality-gated pipelines.
-              Every task makes your agents smarter.
+              <RichText
+                text={t("hero.subtitle")}
+                highlightClass="text-foreground font-medium"
+              />
             </p>
 
             {/* CTA buttons */}
@@ -72,23 +74,23 @@ export default function HeroSection() {
                 className="group inline-flex items-center gap-2 px-6 py-3 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:shadow-[0_0_30px_oklch(0.78_0.15_200/0.4)] transition-all duration-300"
               >
                 <GitBranch className="w-4 h-4" />
-                Clone Repository
+                {t("hero.cta.clone")}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </a>
               <button
                 onClick={() => document.querySelector("#quickstart")?.scrollIntoView({ behavior: "smooth" })}
                 className="inline-flex items-center gap-2 px-6 py-3 border border-border text-foreground font-medium rounded-lg hover:border-prism-cyan/50 hover:text-prism-cyan transition-all duration-300"
               >
-                Quick Start
+                {t("hero.cta.quickstart")}
               </button>
             </div>
 
             {/* Stats */}
             <div className="flex gap-8 pt-4">
               {[
-                { value: "20+", label: "Specialized Agents" },
-                { value: "6", label: "Pipeline Phases" },
-                { value: "3-Tier", label: "Evolution Engine" },
+                { value: "20+", label: t("hero.stat.agents") },
+                { value: "6", label: t("hero.stat.phases") },
+                { value: "3-Tier", label: t("hero.stat.evolution") },
               ].map((stat) => (
                 <div key={stat.label}>
                   <div className="text-2xl font-display font-bold text-prism-cyan">{stat.value}</div>

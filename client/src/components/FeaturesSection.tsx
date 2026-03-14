@@ -12,65 +12,27 @@ import {
   RefreshCcw,
   Database,
   Terminal,
+  type LucideIcon,
 } from "lucide-react";
+import { useI18n } from "@/contexts/I18nContext";
+import { RichText } from "@/components/RichText";
 
-const FEATURES = [
-  {
-    icon: Users,
-    title: "20+ Specialized Agents",
-    description:
-      "Pre-built agents across 7 divisions — engineering, design, growth, product, operations, and more. Each agent has a distinct personality, expertise, and collaboration graph.",
-    color: "cyan" as const,
-  },
-  {
-    icon: Workflow,
-    title: "Quality-Gated Pipelines",
-    description:
-      "PRISM Flow orchestrates work through 6 phases — Discover, Strategize, Scaffold, Build, Harden, Launch — with critic reviews and automatic retry logic at every gate.",
-    color: "amber" as const,
-  },
-  {
-    icon: Brain,
-    title: "3-Tier Self-Evolution",
-    description:
-      "L1 micro-tuning adjusts prompts in real-time. L2 distillation refines agent behavior from experience. L3 architecture review restructures the entire agent topology.",
-    color: "cyan" as const,
-  },
-  {
-    icon: RefreshCcw,
-    title: "Experience Library",
-    description:
-      "Every decision, success, and failure is recorded in a persistent knowledge base. Agents recall relevant experience before each task, getting smarter over time.",
-    color: "amber" as const,
-  },
-  {
-    icon: Shield,
-    title: "Drift Detection",
-    description:
-      "Continuous monitoring of agent performance metrics. When quality degrades, the system automatically flags agents for evolution — before problems compound.",
-    color: "cyan" as const,
-  },
-  {
-    icon: Terminal,
-    title: "MCP Protocol Native",
-    description:
-      "Built on the Model Context Protocol standard. Connect PRISM to any MCP-compatible AI tool — Claude, Cursor, Windsurf, or your own custom integration.",
-    color: "amber" as const,
-  },
-  {
-    icon: Zap,
-    title: "4 Execution Modes",
-    description:
-      "PRISM-Full for greenfield projects, PRISM-Sprint for features, PRISM-Micro for quick fixes, PRISM-Explore for research. Automatic mode selection based on task analysis.",
-    color: "cyan" as const,
-  },
-  {
-    icon: Database,
-    title: "Markdown-as-Code Agents",
-    description:
-      "Agents are defined in version-controlled Markdown files with YAML frontmatter. Edit, fork, and evolve agents like code — because they are code.",
-    color: "amber" as const,
-  },
+interface FeatureDef {
+  icon: LucideIcon;
+  titleKey: string;
+  descKey: string;
+  color: "cyan" | "amber";
+}
+
+const FEATURES: FeatureDef[] = [
+  { icon: Users, titleKey: "features.0.title", descKey: "features.0.desc", color: "cyan" },
+  { icon: Workflow, titleKey: "features.1.title", descKey: "features.1.desc", color: "amber" },
+  { icon: Brain, titleKey: "features.2.title", descKey: "features.2.desc", color: "cyan" },
+  { icon: RefreshCcw, titleKey: "features.3.title", descKey: "features.3.desc", color: "amber" },
+  { icon: Shield, titleKey: "features.4.title", descKey: "features.4.desc", color: "cyan" },
+  { icon: Terminal, titleKey: "features.5.title", descKey: "features.5.desc", color: "amber" },
+  { icon: Zap, titleKey: "features.6.title", descKey: "features.6.desc", color: "cyan" },
+  { icon: Database, titleKey: "features.7.title", descKey: "features.7.desc", color: "amber" },
 ];
 
 const colorMap = {
@@ -87,6 +49,8 @@ const colorMap = {
 };
 
 export default function FeaturesSection() {
+  const { t } = useI18n();
+
   return (
     <section id="features" className="py-24 relative">
       {/* Section header */}
@@ -99,15 +63,13 @@ export default function FeaturesSection() {
           className="max-w-2xl"
         >
           <span className="text-sm font-mono text-prism-cyan tracking-wider uppercase">
-            Core Capabilities
+            {t("features.label")}
           </span>
           <h2 className="text-3xl sm:text-4xl font-display font-bold mt-3 mb-4 text-foreground">
-            Everything You Need to Build with{" "}
-            <span className="text-gradient-mixed">Living Agents</span>
+            <RichText text={t("features.title")} />
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed">
-            PRISM provides a complete framework for multi-agent orchestration with
-            built-in self-evolution. No boilerplate, no glue code — just agents that work.
+            {t("features.subtitle")}
           </p>
         </motion.div>
       </div>
@@ -119,7 +81,7 @@ export default function FeaturesSection() {
             const colors = colorMap[feature.color];
             return (
               <motion.div
-                key={feature.title}
+                key={feature.titleKey}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
@@ -130,10 +92,10 @@ export default function FeaturesSection() {
                   <feature.icon className={`w-5 h-5 ${colors.iconColor}`} />
                 </div>
                 <h3 className="font-display font-semibold text-foreground mb-2 text-sm">
-                  {feature.title}
+                  {t(feature.titleKey)}
                 </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  {feature.description}
+                  {t(feature.descKey)}
                 </p>
               </motion.div>
             );

@@ -1,21 +1,23 @@
 /*
  * PRISM Navbar — Neural Constellation Design
- * Floating glass navigation with cyan accent highlights
+ * Floating glass navigation with cyan accent highlights + language toggle
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Github, BookOpen, Terminal } from "lucide-react";
+import { Menu, X, Github, BookOpen, Terminal, Globe } from "lucide-react";
+import { useI18n } from "@/contexts/I18nContext";
 
-const NAV_LINKS = [
-  { label: "Features", href: "#features" },
-  { label: "Architecture", href: "#architecture" },
-  { label: "Pipeline", href: "#pipeline" },
-  { label: "Evolution", href: "#evolution" },
-  { label: "Quick Start", href: "#quickstart" },
+const NAV_KEYS = [
+  { key: "nav.features", href: "#features" },
+  { key: "nav.architecture", href: "#architecture" },
+  { key: "nav.pipeline", href: "#pipeline" },
+  { key: "nav.evolution", href: "#evolution" },
+  { key: "nav.quickstart", href: "#quickstart" },
 ];
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t, locale, toggleLocale } = useI18n();
 
   const scrollTo = (href: string) => {
     setMobileOpen(false);
@@ -39,19 +41,27 @@ export default function Navbar() {
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((link) => (
+            {NAV_KEYS.map((link) => (
               <button
                 key={link.href}
                 onClick={() => scrollTo(link.href)}
                 className="px-3 py-1.5 text-sm text-muted-foreground hover:text-prism-cyan transition-colors font-mono"
               >
-                {link.label}
+                {t(link.key)}
               </button>
             ))}
           </div>
 
-          {/* CTA + GitHub */}
+          {/* CTA + Language + GitHub */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Language toggle */}
+            <button
+              onClick={toggleLocale}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors font-mono border border-border/50 rounded-lg hover:border-prism-cyan/30"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              {locale === "zh" ? "EN" : "中文"}
+            </button>
             <a
               href="https://github.com/prism-agentic/prism"
               target="_blank"
@@ -67,7 +77,7 @@ export default function Navbar() {
               className="px-4 py-2 text-sm font-medium bg-prism-cyan/10 text-prism-cyan border border-prism-cyan/30 rounded-lg hover:bg-prism-cyan/20 transition-all"
             >
               <BookOpen className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
-              Docs
+              {t("nav.docs")}
             </a>
           </div>
 
@@ -90,16 +100,23 @@ export default function Navbar() {
               transition={{ duration: 0.2 }}
               className="md:hidden glass-card rounded-xl mt-2 p-4"
             >
-              {NAV_LINKS.map((link) => (
+              {NAV_KEYS.map((link) => (
                 <button
                   key={link.href}
                   onClick={() => scrollTo(link.href)}
                   className="block w-full text-left px-3 py-2.5 text-sm text-muted-foreground hover:text-prism-cyan transition-colors font-mono"
                 >
-                  {link.label}
+                  {t(link.key)}
                 </button>
               ))}
               <div className="border-t border-border mt-2 pt-3 flex items-center gap-3">
+                <button
+                  onClick={toggleLocale}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors font-mono border border-border/50 rounded-lg"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  {locale === "zh" ? "EN" : "中文"}
+                </button>
                 <a
                   href="https://github.com/prism-agentic/prism"
                   target="_blank"
@@ -114,7 +131,7 @@ export default function Navbar() {
                   rel="noopener noreferrer"
                   className="px-4 py-2 text-sm font-medium bg-prism-cyan/10 text-prism-cyan border border-prism-cyan/30 rounded-lg"
                 >
-                  Docs
+                  {t("nav.docs")}
                 </a>
               </div>
             </motion.div>

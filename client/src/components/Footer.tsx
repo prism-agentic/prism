@@ -2,8 +2,11 @@
  * PRISM Footer — Neural Constellation Design
  */
 import { Github, Terminal } from "lucide-react";
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function Footer() {
+  const { t } = useI18n();
+
   return (
     <footer className="border-t border-border/50 py-12">
       <div className="container mx-auto">
@@ -34,7 +37,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="hover:text-prism-cyan transition-colors"
             >
-              Documentation
+              {t("footer.docs")}
             </a>
             <a
               href="https://github.com/prism-agentic/prism/issues"
@@ -42,13 +45,13 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="hover:text-prism-cyan transition-colors"
             >
-              Issues
+              {t("footer.issues")}
             </a>
           </div>
 
           {/* Copyright */}
           <div className="text-xs text-muted-foreground font-mono">
-            MIT License &middot; Built with PRISM
+            {t("footer.license")}
           </div>
         </div>
       </div>

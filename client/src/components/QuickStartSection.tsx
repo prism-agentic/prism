@@ -5,8 +5,10 @@
 import { motion } from "framer-motion";
 import { Copy, Check } from "lucide-react";
 import { useState } from "react";
+import { useI18n } from "@/contexts/I18nContext";
+import { RichText } from "@/components/RichText";
 
-function CodeBlock({ title, code, language = "bash" }: { title: string; code: string; language?: string }) {
+function CodeBlock({ title, code }: { title: string; code: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -40,11 +42,8 @@ function CodeBlock({ title, code, language = "bash" }: { title: string; code: st
   );
 }
 
-const STEPS = [
+const STEP_CODES = [
   {
-    step: "01",
-    title: "Install PRISM",
-    description: "Install from PyPI or clone the repository directly.",
     code: `$ pip install prism-agentic
 
 # Or clone from source
@@ -53,9 +52,6 @@ $ cd prism && pip install -e ".[dev]"`,
     file: "terminal",
   },
   {
-    step: "02",
-    title: "Initialize Your Project",
-    description: "Create a new PRISM project with the CLI. This sets up the agent library, evolution database, and configuration.",
     code: `$ prism init my-project
 ✓ Created prism.yaml
 ✓ Loaded 20 agents (7 divisions)
@@ -68,9 +64,6 @@ SPECIALIZED  conductor, critic, planner`,
     file: "terminal",
   },
   {
-    step: "03",
-    title: "Connect Your AI Tool",
-    description: "Add the PRISM MCP server to your AI tool's configuration. Works with Claude, Cursor, Windsurf, and any MCP-compatible client.",
     code: `{
   "mcpServers": {
     "prism": {
@@ -83,9 +76,6 @@ SPECIALIZED  conductor, critic, planner`,
     file: "mcp-config.json",
   },
   {
-    step: "04",
-    title: "Start Building",
-    description: "Your AI tool now has access to the full PRISM agent library. Agents collaborate, learn from experience, and evolve over time.",
     code: `$ prism flow start --description "Build a SaaS MVP"
 Pipeline pipe-a3f2 created (PRISM-Full)
 → Phase 0: Discover ACTIVE
@@ -100,6 +90,15 @@ Pipeline pipe-a3f2 created (PRISM-Full)
 ];
 
 export default function QuickStartSection() {
+  const { t } = useI18n();
+
+  const steps = [0, 1, 2, 3].map((i) => ({
+    step: String(i + 1).padStart(2, "0"),
+    titleKey: `qs.step${i}.title`,
+    descKey: `qs.step${i}.desc`,
+    ...STEP_CODES[i],
+  }));
+
   return (
     <section id="quickstart" className="py-24 relative">
       <div className="container mx-auto">
@@ -112,20 +111,19 @@ export default function QuickStartSection() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <span className="text-sm font-mono text-prism-cyan tracking-wider uppercase">
-            Get Started
+            {t("qs.label")}
           </span>
           <h2 className="text-3xl sm:text-4xl font-display font-bold mt-3 mb-4 text-foreground">
-            Up and Running in{" "}
-            <span className="text-gradient-cyan">4 Steps</span>
+            <RichText text={t("qs.title")} highlightClass="text-gradient-cyan" />
           </h2>
           <p className="text-muted-foreground text-lg">
-            From zero to a fully orchestrated multi-agent system in under 5 minutes.
+            {t("qs.subtitle")}
           </p>
         </motion.div>
 
         {/* Steps */}
         <div className="max-w-3xl mx-auto space-y-10">
-          {STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <motion.div
               key={step.step}
               initial={{ opacity: 0, y: 30 }}
@@ -139,10 +137,10 @@ export default function QuickStartSection() {
                 </div>
                 <div>
                   <h3 className="font-display font-semibold text-foreground text-lg">
-                    {step.title}
+                    {t(step.titleKey)}
                   </h3>
                   <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
-                    {step.description}
+                    {t(step.descKey)}
                   </p>
                 </div>
               </div>

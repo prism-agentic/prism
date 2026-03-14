@@ -4,46 +4,50 @@
  */
 import { motion } from "framer-motion";
 import { Cpu, Layers, Network, type LucideIcon } from "lucide-react";
+import { useI18n } from "@/contexts/I18nContext";
+import { RichText } from "@/components/RichText";
 
 const EVOLUTION_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-evolution-a2bvTWnuL9jWsMcfgKzGeh.webp";
 
-interface Tier {
+interface TierDef {
   icon: LucideIcon;
   level: string;
-  name: string;
-  desc: string;
-  metrics: string[];
+  nameKey: string;
+  descKey: string;
+  metricKeys: string[];
   isCyan: boolean;
 }
 
-const TIERS: Tier[] = [
+const TIERS: TierDef[] = [
   {
     icon: Cpu,
     level: "L1",
-    name: "Micro-Tuning",
-    desc: "Real-time prompt adjustments based on immediate task feedback. The system records what works and what doesn't, building a library of principles that agents recall before each task.",
-    metrics: ["First-pass rate tracking", "Automatic principle extraction", "Context-aware recall"],
+    nameKey: "evo.tier0.name",
+    descKey: "evo.tier0.desc",
+    metricKeys: ["evo.tier0.m0", "evo.tier0.m1", "evo.tier0.m2"],
     isCyan: true,
   },
   {
     icon: Layers,
     level: "L2",
-    name: "Distillation",
-    desc: "Periodic refinement of agent system prompts by analyzing accumulated experience. When enough evidence accumulates, the distillation engine rewrites agent instructions to encode learned patterns.",
-    metrics: ["Experience-driven rewriting", "A/B prompt testing", "Regression detection"],
+    nameKey: "evo.tier1.name",
+    descKey: "evo.tier1.desc",
+    metricKeys: ["evo.tier1.m0", "evo.tier1.m1", "evo.tier1.m2"],
     isCyan: false,
   },
   {
     icon: Network,
     level: "L3",
-    name: "Architecture Review",
-    desc: "Structural evolution of the entire agent topology. The system can propose new agents, merge redundant ones, or restructure collaboration graphs based on long-term performance data.",
-    metrics: ["Agent topology optimization", "Division restructuring", "Collaboration graph evolution"],
+    nameKey: "evo.tier2.name",
+    descKey: "evo.tier2.desc",
+    metricKeys: ["evo.tier2.m0", "evo.tier2.m1", "evo.tier2.m2"],
     isCyan: true,
   },
 ];
 
 export default function EvolutionSection() {
+  const { t } = useI18n();
+
   return (
     <section id="evolution" className="py-24 relative">
       <div className="container mx-auto">
@@ -56,15 +60,13 @@ export default function EvolutionSection() {
           className="max-w-2xl mb-16"
         >
           <span className="text-sm font-mono text-prism-amber tracking-wider uppercase">
-            Self-Evolution Engine
+            {t("evo.label")}
           </span>
           <h2 className="text-3xl sm:text-4xl font-display font-bold mt-3 mb-4 text-foreground">
-            Every Task Makes Your Agents{" "}
-            <span className="text-gradient-amber">Smarter</span>
+            <RichText text={t("evo.title")} highlightClass="text-gradient-amber" />
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed">
-            PRISM's 3-tier evolution system continuously improves agent performance —
-            from micro-adjustments to full architectural restructuring.
+            {t("evo.subtitle")}
           </p>
         </motion.div>
 
@@ -79,7 +81,7 @@ export default function EvolutionSection() {
           <div className="glass-card rounded-xl p-2 glow-amber">
             <img
               src={EVOLUTION_IMG}
-              alt="PRISM Evolution — three stages of transformation from simple to complex to radiant"
+              alt="PRISM Evolution"
               className="rounded-lg w-full"
               loading="lazy"
             />
@@ -107,21 +109,21 @@ export default function EvolutionSection() {
                     {tier.level}
                   </div>
                   <h3 className="font-display font-semibold text-foreground">
-                    {tier.name}
+                    {t(tier.nameKey)}
                   </h3>
                 </div>
               </div>
 
               <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                {tier.desc}
+                {t(tier.descKey)}
               </p>
 
               {/* Metrics */}
               <ul className="space-y-2">
-                {tier.metrics.map((metric) => (
-                  <li key={metric} className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+                {tier.metricKeys.map((mk) => (
+                  <li key={mk} className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
                     <div className={`w-1.5 h-1.5 rounded-full ${tier.isCyan ? "bg-prism-cyan/60" : "bg-prism-amber/60"}`} />
-                    {metric}
+                    {t(mk)}
                   </li>
                 ))}
               </ul>

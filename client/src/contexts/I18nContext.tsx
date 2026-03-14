@@ -1,0 +1,283 @@
+/*
+ * PRISM i18n — Internationalization Context
+ * Default language: Chinese (zh), supports English (en)
+ */
+import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+
+export type Locale = "zh" | "en";
+
+interface I18nContextType {
+  locale: Locale;
+  t: (key: string) => string;
+  setLocale: (locale: Locale) => void;
+  toggleLocale: () => void;
+}
+
+const I18nContext = createContext<I18nContextType | null>(null);
+
+export function useI18n() {
+  const ctx = useContext(I18nContext);
+  if (!ctx) throw new Error("useI18n must be used within I18nProvider");
+  return ctx;
+}
+
+/* ─── Translation Dictionaries ─── */
+
+const zh: Record<string, string> = {
+  // Navbar
+  "nav.features": "核心能力",
+  "nav.architecture": "系统架构",
+  "nav.pipeline": "流水线",
+  "nav.evolution": "自进化",
+  "nav.quickstart": "快速开始",
+  "nav.docs": "文档",
+
+  // Hero
+  "hero.badge": "v0.2.0 — 开源框架",
+  "hero.title.line1": "会学习的",
+  "hero.title.learn": "智能体",
+  "hero.title.comma": "，会",
+  "hero.title.evolve": "进化",
+  "hero.title.line3": "，能交付",
+  "hero.subtitle": "PRISM 是一个<highlight>多智能体自进化框架</highlight>，通过质量门控流水线编排专业化 AI 智能体。每一次任务都让你的智能体更聪明。",
+  "hero.cta.clone": "克隆仓库",
+  "hero.cta.quickstart": "快速开始",
+  "hero.stat.agents": "专业智能体",
+  "hero.stat.phases": "流水线阶段",
+  "hero.stat.evolution": "进化引擎",
+
+  // Features
+  "features.label": "核心能力",
+  "features.title": "构建<highlight>活的智能体</highlight>所需的一切",
+  "features.subtitle": "PRISM 提供完整的多智能体编排框架，内置自进化机制。无需样板代码、无需胶水逻辑 — 只有能工作的智能体。",
+  "features.0.title": "20+ 专业智能体",
+  "features.0.desc": "覆盖 7 个部门的预置智能体 — 工程、设计、增长、产品、运营等。每个智能体都有独特的性格、专长和协作图谱。",
+  "features.1.title": "质量门控流水线",
+  "features.1.desc": "PRISM Flow 通过 6 个阶段编排工作 — 发现、策略、脚手架、构建、加固、发布 — 每个关卡都有评审员审查和自动重试逻辑。",
+  "features.2.title": "三层自进化",
+  "features.2.desc": "L1 微调实时调整提示词。L2 蒸馏从经验中精炼智能体行为。L3 架构审查重构整个智能体拓扑。",
+  "features.3.title": "经验库",
+  "features.3.desc": "每一个决策、成功和失败都记录在持久化知识库中。智能体在每次任务前回忆相关经验，随时间变得更加智能。",
+  "features.4.title": "漂移检测",
+  "features.4.desc": "持续监控智能体性能指标。当质量下降时，系统自动标记需要进化的智能体 — 在问题恶化之前。",
+  "features.5.title": "MCP 协议原生",
+  "features.5.desc": "基于 Model Context Protocol 标准构建。将 PRISM 连接到任何 MCP 兼容的 AI 工具 — Claude、Cursor、Windsurf 或你自己的集成。",
+  "features.6.title": "4 种执行模式",
+  "features.6.desc": "PRISM-Full 用于全新项目，PRISM-Sprint 用于功能迭代，PRISM-Micro 用于快速修复，PRISM-Explore 用于研究探索。根据任务分析自动选择模式。",
+  "features.7.title": "Markdown 即代码",
+  "features.7.desc": "智能体以版本控制的 Markdown 文件定义，包含 YAML 前置数据。像代码一样编辑、分叉和进化智能体 — 因为它们就是代码。",
+
+  // Architecture
+  "arch.label": "系统架构",
+  "arch.title": "分层设计，<highlight>自然进化</highlight>",
+  "arch.subtitle": "四个互联层协同工作，创造一个随每次交互而改进的系统。",
+  "arch.layer0.name": "智能体层",
+  "arch.layer0.desc": "20+ 专业智能体以 Markdown 定义，包含 YAML 前置数据。每个智能体都有性格、专长、协作规则和进化元数据。",
+  "arch.layer1.name": "流程引擎",
+  "arch.layer1.desc": "NEXUS 编排引擎提供 4 种执行模式、6 个流水线阶段、质量门控和自动评审循环。",
+  "arch.layer2.name": "进化核心",
+  "arch.layer2.desc": "三层自我改进：L1 微调、L2 经验蒸馏、L3 架构审查。持久化经验库配合漂移检测。",
+  "arch.layer3.name": "MCP 接口",
+  "arch.layer3.desc": "标准 Model Context Protocol 服务器暴露 8 个工具。连接 Claude、Cursor、Windsurf 或任何 MCP 兼容的 AI 工具。",
+
+  // Pipeline
+  "pipeline.label": "PRISM Flow",
+  "pipeline.title": "每个阶段都有<highlight>质量门控</highlight>",
+  "pipeline.subtitle": "工作流经 6 个阶段，每个阶段都有专属质量门控。只有评审员智能体批准后才能推进。",
+  "pipeline.phase0.name": "发现",
+  "pipeline.phase0.gate": "需求确认",
+  "pipeline.phase0.desc": "利益相关者分析、范围定义、风险评估",
+  "pipeline.phase1.name": "策略",
+  "pipeline.phase1.gate": "方案批准",
+  "pipeline.phase1.desc": "架构决策、技术选型、时间规划",
+  "pipeline.phase2.name": "脚手架",
+  "pipeline.phase2.gate": "架构验证",
+  "pipeline.phase2.desc": "项目结构、CI/CD 配置、依赖管理",
+  "pipeline.phase3.name": "构建",
+  "pipeline.phase3.gate": "代码审查通过",
+  "pipeline.phase3.desc": "功能实现，配合评审员审查循环",
+  "pipeline.phase4.name": "加固",
+  "pipeline.phase4.gate": "安全审计",
+  "pipeline.phase4.desc": "测试、安全审计、性能优化",
+  "pipeline.phase5.name": "发布",
+  "pipeline.phase5.gate": "部署就绪",
+  "pipeline.phase5.desc": "文档编写、部署上线、监控配置",
+
+  // Evolution
+  "evo.label": "自进化引擎",
+  "evo.title": "每次任务都让智能体<highlight>更聪明</highlight>",
+  "evo.subtitle": "PRISM 的三层进化系统持续提升智能体性能 — 从微调到全面架构重构。",
+  "evo.tier0.name": "微调",
+  "evo.tier0.desc": "基于即时任务反馈的实时提示词调整。系统记录有效和无效的做法，构建智能体在每次任务前回忆的原则库。",
+  "evo.tier0.m0": "首次通过率追踪",
+  "evo.tier0.m1": "自动原则提取",
+  "evo.tier0.m2": "上下文感知回忆",
+  "evo.tier1.name": "蒸馏",
+  "evo.tier1.desc": "通过分析积累的经验定期精炼智能体系统提示词。当足够的证据积累后，蒸馏引擎重写智能体指令以编码学到的模式。",
+  "evo.tier1.m0": "经验驱动重写",
+  "evo.tier1.m1": "A/B 提示词测试",
+  "evo.tier1.m2": "回归检测",
+  "evo.tier2.name": "架构审查",
+  "evo.tier2.desc": "整个智能体拓扑的结构性进化。系统可以提议新智能体、合并冗余智能体，或基于长期性能数据重构协作图谱。",
+  "evo.tier2.m0": "智能体拓扑优化",
+  "evo.tier2.m1": "部门重组",
+  "evo.tier2.m2": "协作图谱进化",
+
+  // QuickStart
+  "qs.label": "快速开始",
+  "qs.title": "<highlight>4 步</highlight>启动运行",
+  "qs.subtitle": "从零到完整的多智能体编排系统，不到 5 分钟。",
+  "qs.step0.title": "安装 PRISM",
+  "qs.step0.desc": "从 PyPI 安装或直接克隆仓库。",
+  "qs.step1.title": "初始化项目",
+  "qs.step1.desc": "使用 CLI 创建新的 PRISM 项目。这将配置智能体库、进化数据库和配置文件。",
+  "qs.step2.title": "连接 AI 工具",
+  "qs.step2.desc": "将 PRISM MCP 服务器添加到你的 AI 工具配置中。支持 Claude、Cursor、Windsurf 和任何 MCP 兼容客户端。",
+  "qs.step3.title": "开始构建",
+  "qs.step3.desc": "你的 AI 工具现在可以访问完整的 PRISM 智能体库。智能体协作、从经验中学习，并随时间进化。",
+
+  // Footer
+  "footer.docs": "文档",
+  "footer.issues": "问题反馈",
+  "footer.license": "MIT 许可证 · 由 PRISM 构建",
+};
+
+const en: Record<string, string> = {
+  // Navbar
+  "nav.features": "Features",
+  "nav.architecture": "Architecture",
+  "nav.pipeline": "Pipeline",
+  "nav.evolution": "Evolution",
+  "nav.quickstart": "Quick Start",
+  "nav.docs": "Docs",
+
+  // Hero
+  "hero.badge": "v0.2.0 — Open Source",
+  "hero.title.line1": "Agents That",
+  "hero.title.learn": "Learn",
+  "hero.title.comma": ", ",
+  "hero.title.evolve": "Evolve",
+  "hero.title.line3": ", & Ship",
+  "hero.subtitle": "PRISM is a <highlight>self-evolving multi-agent framework</highlight> that orchestrates specialized AI agents through quality-gated pipelines. Every task makes your agents smarter.",
+  "hero.cta.clone": "Clone Repository",
+  "hero.cta.quickstart": "Quick Start",
+  "hero.stat.agents": "Specialized Agents",
+  "hero.stat.phases": "Pipeline Phases",
+  "hero.stat.evolution": "Evolution Engine",
+
+  // Features
+  "features.label": "Core Capabilities",
+  "features.title": "Everything You Need to Build with <highlight>Living Agents</highlight>",
+  "features.subtitle": "PRISM provides a complete framework for multi-agent orchestration with built-in self-evolution. No boilerplate, no glue code — just agents that work.",
+  "features.0.title": "20+ Specialized Agents",
+  "features.0.desc": "Pre-built agents across 7 divisions — engineering, design, growth, product, operations, and more. Each agent has a distinct personality, expertise, and collaboration graph.",
+  "features.1.title": "Quality-Gated Pipelines",
+  "features.1.desc": "PRISM Flow orchestrates work through 6 phases — Discover, Strategize, Scaffold, Build, Harden, Launch — with critic reviews and automatic retry logic at every gate.",
+  "features.2.title": "3-Tier Self-Evolution",
+  "features.2.desc": "L1 micro-tuning adjusts prompts in real-time. L2 distillation refines agent behavior from experience. L3 architecture review restructures the entire agent topology.",
+  "features.3.title": "Experience Library",
+  "features.3.desc": "Every decision, success, and failure is recorded in a persistent knowledge base. Agents recall relevant experience before each task, getting smarter over time.",
+  "features.4.title": "Drift Detection",
+  "features.4.desc": "Continuous monitoring of agent performance metrics. When quality degrades, the system automatically flags agents for evolution — before problems compound.",
+  "features.5.title": "MCP Protocol Native",
+  "features.5.desc": "Built on the Model Context Protocol standard. Connect PRISM to any MCP-compatible AI tool — Claude, Cursor, Windsurf, or your own custom integration.",
+  "features.6.title": "4 Execution Modes",
+  "features.6.desc": "PRISM-Full for greenfield projects, PRISM-Sprint for features, PRISM-Micro for quick fixes, PRISM-Explore for research. Automatic mode selection based on task analysis.",
+  "features.7.title": "Markdown-as-Code Agents",
+  "features.7.desc": "Agents are defined in version-controlled Markdown files with YAML frontmatter. Edit, fork, and evolve agents like code — because they are code.",
+
+  // Architecture
+  "arch.label": "System Architecture",
+  "arch.title": "Layered by Design, <highlight>Evolved by Nature</highlight>",
+  "arch.subtitle": "Four interconnected layers work together to create a system that improves with every interaction.",
+  "arch.layer0.name": "Agent Layer",
+  "arch.layer0.desc": "20+ specialized agents defined in Markdown with YAML frontmatter. Each has personality, expertise, collaboration rules, and evolution metadata.",
+  "arch.layer1.name": "Flow Engine",
+  "arch.layer1.desc": "NEXUS orchestration engine with 4 execution modes, 6 pipeline phases, quality gates, and automatic critic review loops.",
+  "arch.layer2.name": "Evolution Core",
+  "arch.layer2.desc": "3-tier self-improvement: L1 micro-tuning, L2 distillation from experience, L3 architecture review. Persistent experience library with drift detection.",
+  "arch.layer3.name": "MCP Interface",
+  "arch.layer3.desc": "Standard Model Context Protocol server exposing 8 tools. Connect to Claude, Cursor, Windsurf, or any MCP-compatible AI tool.",
+
+  // Pipeline
+  "pipeline.label": "PRISM Flow",
+  "pipeline.title": "Quality Gates at <highlight>Every Phase</highlight>",
+  "pipeline.subtitle": "Work flows through 6 phases, each with a dedicated quality gate. Nothing advances until the critic agent approves.",
+  "pipeline.phase0.name": "Discover",
+  "pipeline.phase0.gate": "Requirements Met",
+  "pipeline.phase0.desc": "Stakeholder analysis, scope definition, risk assessment",
+  "pipeline.phase1.name": "Strategize",
+  "pipeline.phase1.gate": "Plan Approved",
+  "pipeline.phase1.desc": "Architecture decisions, technology selection, timeline",
+  "pipeline.phase2.name": "Scaffold",
+  "pipeline.phase2.gate": "Architecture Validated",
+  "pipeline.phase2.desc": "Project structure, CI/CD setup, dependency management",
+  "pipeline.phase3.name": "Build",
+  "pipeline.phase3.gate": "Code Review Passed",
+  "pipeline.phase3.desc": "Feature implementation with critic review loops",
+  "pipeline.phase4.name": "Harden",
+  "pipeline.phase4.gate": "Security Audited",
+  "pipeline.phase4.desc": "Testing, security audit, performance optimization",
+  "pipeline.phase5.name": "Launch",
+  "pipeline.phase5.gate": "Deploy Ready",
+  "pipeline.phase5.desc": "Documentation, deployment, monitoring setup",
+
+  // Evolution
+  "evo.label": "Self-Evolution Engine",
+  "evo.title": "Every Task Makes Your Agents <highlight>Smarter</highlight>",
+  "evo.subtitle": "PRISM's 3-tier evolution system continuously improves agent performance — from micro-adjustments to full architectural restructuring.",
+  "evo.tier0.name": "Micro-Tuning",
+  "evo.tier0.desc": "Real-time prompt adjustments based on immediate task feedback. The system records what works and what doesn't, building a library of principles that agents recall before each task.",
+  "evo.tier0.m0": "First-pass rate tracking",
+  "evo.tier0.m1": "Automatic principle extraction",
+  "evo.tier0.m2": "Context-aware recall",
+  "evo.tier1.name": "Distillation",
+  "evo.tier1.desc": "Periodic refinement of agent system prompts by analyzing accumulated experience. When enough evidence accumulates, the distillation engine rewrites agent instructions to encode learned patterns.",
+  "evo.tier1.m0": "Experience-driven rewriting",
+  "evo.tier1.m1": "A/B prompt testing",
+  "evo.tier1.m2": "Regression detection",
+  "evo.tier2.name": "Architecture Review",
+  "evo.tier2.desc": "Structural evolution of the entire agent topology. The system can propose new agents, merge redundant ones, or restructure collaboration graphs based on long-term performance data.",
+  "evo.tier2.m0": "Agent topology optimization",
+  "evo.tier2.m1": "Division restructuring",
+  "evo.tier2.m2": "Collaboration graph evolution",
+
+  // QuickStart
+  "qs.label": "Get Started",
+  "qs.title": "Up and Running in <highlight>4 Steps</highlight>",
+  "qs.subtitle": "From zero to a fully orchestrated multi-agent system in under 5 minutes.",
+  "qs.step0.title": "Install PRISM",
+  "qs.step0.desc": "Install from PyPI or clone the repository directly.",
+  "qs.step1.title": "Initialize Your Project",
+  "qs.step1.desc": "Create a new PRISM project with the CLI. This sets up the agent library, evolution database, and configuration.",
+  "qs.step2.title": "Connect Your AI Tool",
+  "qs.step2.desc": "Add the PRISM MCP server to your AI tool's configuration. Works with Claude, Cursor, Windsurf, and any MCP-compatible client.",
+  "qs.step3.title": "Start Building",
+  "qs.step3.desc": "Your AI tool now has access to the full PRISM agent library. Agents collaborate, learn from experience, and evolve over time.",
+
+  // Footer
+  "footer.docs": "Documentation",
+  "footer.issues": "Issues",
+  "footer.license": "MIT License · Built with PRISM",
+};
+
+const dictionaries: Record<Locale, Record<string, string>> = { zh, en };
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocale] = useState<Locale>("zh");
+
+  const t = useCallback(
+    (key: string): string => dictionaries[locale][key] ?? key,
+    [locale]
+  );
+
+  const toggleLocale = useCallback(() => {
+    setLocale((prev) => (prev === "zh" ? "en" : "zh"));
+  }, []);
+
+  return (
+    <I18nContext.Provider value={{ locale, t, setLocale, toggleLocale }}>
+      {children}
+    </I18nContext.Provider>
+  );
+}

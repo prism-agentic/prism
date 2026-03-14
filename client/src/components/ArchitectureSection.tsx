@@ -3,33 +3,21 @@
  * Showcases the layered architecture with generated visual
  */
 import { motion } from "framer-motion";
+import { useI18n } from "@/contexts/I18nContext";
+import { RichText } from "@/components/RichText";
 
 const ARCH_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-architecture-kbKQ8nXipHruTLeYyeezwM.webp";
 
-const LAYERS = [
-  {
-    name: "Agent Layer",
-    desc: "20+ specialized agents defined in Markdown with YAML frontmatter. Each has personality, expertise, collaboration rules, and evolution metadata.",
-    isCyan: true,
-  },
-  {
-    name: "Flow Engine",
-    desc: "NEXUS orchestration engine with 4 execution modes, 6 pipeline phases, quality gates, and automatic critic review loops.",
-    isCyan: false,
-  },
-  {
-    name: "Evolution Core",
-    desc: "3-tier self-improvement: L1 micro-tuning, L2 distillation from experience, L3 architecture review. Persistent experience library with drift detection.",
-    isCyan: true,
-  },
-  {
-    name: "MCP Interface",
-    desc: "Standard Model Context Protocol server exposing 8 tools. Connect to Claude, Cursor, Windsurf, or any MCP-compatible AI tool.",
-    isCyan: false,
-  },
+const LAYER_KEYS = [
+  { nameKey: "arch.layer0.name", descKey: "arch.layer0.desc", isCyan: true },
+  { nameKey: "arch.layer1.name", descKey: "arch.layer1.desc", isCyan: false },
+  { nameKey: "arch.layer2.name", descKey: "arch.layer2.desc", isCyan: true },
+  { nameKey: "arch.layer3.name", descKey: "arch.layer3.desc", isCyan: false },
 ];
 
 export default function ArchitectureSection() {
+  const { t } = useI18n();
+
   return (
     <section id="architecture" className="py-24 relative">
       <div className="container mx-auto">
@@ -42,15 +30,13 @@ export default function ArchitectureSection() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <span className="text-sm font-mono text-prism-amber tracking-wider uppercase">
-            System Architecture
+            {t("arch.label")}
           </span>
           <h2 className="text-3xl sm:text-4xl font-display font-bold mt-3 mb-4 text-foreground">
-            Layered by Design,{" "}
-            <span className="text-gradient-amber">Evolved by Nature</span>
+            <RichText text={t("arch.title")} highlightClass="text-gradient-amber" />
           </h2>
           <p className="text-muted-foreground text-lg">
-            Four interconnected layers work together to create a system that improves
-            with every interaction.
+            {t("arch.subtitle")}
           </p>
         </motion.div>
 
@@ -67,7 +53,7 @@ export default function ArchitectureSection() {
             <div className="glass-card rounded-xl p-2 glow-amber">
               <img
                 src={ARCH_IMG}
-                alt="PRISM Architecture — layered hexagonal structure showing agent network, data processing, knowledge base, algorithm optimization, and decision core"
+                alt="PRISM Architecture"
                 className="rounded-lg w-full"
                 loading="lazy"
               />
@@ -76,9 +62,9 @@ export default function ArchitectureSection() {
 
           {/* Layer descriptions */}
           <div className="space-y-5">
-            {LAYERS.map((layer, i) => (
+            {LAYER_KEYS.map((layer, i) => (
               <motion.div
-                key={layer.name}
+                key={layer.nameKey}
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
@@ -93,10 +79,10 @@ export default function ArchitectureSection() {
                   </div>
                   <div>
                     <h3 className="font-display font-semibold text-foreground mb-1">
-                      {layer.name}
+                      {t(layer.nameKey)}
                     </h3>
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                      {layer.desc}
+                      {t(layer.descKey)}
                     </p>
                   </div>
                 </div>
