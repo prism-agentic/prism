@@ -47,8 +47,10 @@ export default function EvolutionDiagram() {
   const [hoveredTier, setHoveredTier] = useState<number | null>(null);
   const [activeTier, setActiveTier] = useState<number>(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isVisibleRef = useRef(true);
 
   const displayedTier = hoveredTier !== null ? hoveredTier : activeTier;
 
@@ -82,6 +84,18 @@ export default function EvolutionDiagram() {
     setHoveredTier(null);
     startTimer();
   }, [startTimer]);
+
+  // Visibility observer — pause animation when off-screen
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { isVisibleRef.current = entry.isIntersecting; },
+      { rootMargin: "100px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Canvas particle animation
   useEffect(() => {
@@ -134,6 +148,8 @@ export default function EvolutionDiagram() {
 
     function animate() {
       if (!ctx || !canvas) return;
+      animRef.current = requestAnimationFrame(animate);
+      if (!isVisibleRef.current) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       particles.forEach((p) => {
@@ -176,7 +192,6 @@ export default function EvolutionDiagram() {
         ctx.fill();
       });
 
-      animRef.current = requestAnimationFrame(animate);
     }
 
     animate();
@@ -188,7 +203,7 @@ export default function EvolutionDiagram() {
   }
 
   return (
-    <div className="relative w-full">
+    <div ref={containerRef} className="relative w-full">
       {/* SVG diagram — compact, no extra whitespace */}
       <div className="overflow-x-auto">
         <div className="min-w-[500px] relative" style={{ aspectRatio: `${W}/${H}` }}>

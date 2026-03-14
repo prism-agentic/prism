@@ -140,6 +140,7 @@ export default function AgentNetwork() {
   const activeIdRef = useRef<string>("conductor");
   const animRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isVisibleRef = useRef(true);
 
   const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
   const [activeAgent, setActiveAgent] = useState<number>(0); // index in WORKFLOW_ORDER
@@ -170,6 +171,18 @@ export default function AgentNetwork() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [startTimer]);
+
+  // Visibility observer — pause animation when off-screen
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { isVisibleRef.current = entry.isIntersecting; },
+      { rootMargin: "100px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Resize handler
   useEffect(() => {
@@ -234,6 +247,8 @@ export default function AgentNetwork() {
     }
 
     const draw = () => {
+      animRef.current = requestAnimationFrame(draw);
+      if (!isVisibleRef.current) return;
       const nodes = nodesRef.current;
       const particles = particlesRef.current;
       const hovered = activeIdRef.current;
@@ -362,7 +377,6 @@ export default function AgentNetwork() {
         ctx.fillText(t(node.labelKey), node.x, node.y + r + 14);
       });
 
-      animRef.current = requestAnimationFrame(draw);
     };
 
     draw();
