@@ -231,7 +231,7 @@ const zh: Record<string, string> = {
   "net.legend.tech": "技术智能体",
   "net.legend.biz": "业务智能体",
   "net.section.title": "智能体协作网络",
-  "net.section.desc": "悬停查看智能体详情，观察数据在节点间实时流动",
+  "net.section.desc": "按实际工作流顺序自动轮动，悬停查看智能体详情",
 };
 
 const en: Record<string, string> = {
@@ -442,7 +442,7 @@ const en: Record<string, string> = {
   "net.legend.tech": "Technical Agents",
   "net.legend.biz": "Business Agents",
   "net.section.title": "Agent Collaboration Network",
-  "net.section.desc": "Hover to see agent details, watch data flow between nodes in real-time",
+  "net.section.desc": "Auto-cycles through agents in workflow order. Hover to see details.",
 };
 
 const dictionaries: Record<Locale, Record<string, string>> = { zh, en };

@@ -1,7 +1,7 @@
 /*
  * PRISM Agent Network — Interactive Multi-Agent Collaboration Visualization
- * Canvas-based animated network showing agents as nodes with data flowing between them
- * Hover to highlight agent connections, click to see agent details
+ * Canvas-based animated network with auto-cycling agent highlight and info panel
+ * Agents cycle in workflow order: Conductor → Researcher → PM → UX → Backend → Frontend → DevOps → Critic → Growth
  */
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useI18n } from "@/contexts/I18nContext";
@@ -22,7 +22,7 @@ interface AgentNode {
 interface Connection {
   from: string;
   to: string;
-  strength: number; // 0-1
+  strength: number;
 }
 
 interface Particle {
@@ -38,6 +38,7 @@ const AMBER = "#ffb347";
 const CYAN_DIM = "rgba(0, 212, 255, 0.15)";
 const AMBER_DIM = "rgba(255, 179, 71, 0.15)";
 
+// Agent definitions
 const AGENT_DEFS: Omit<AgentNode, "x" | "y" | "vx" | "vy">[] = [
   { id: "conductor", labelKey: "net.conductor", radius: 22, color: CYAN, glowColor: CYAN_DIM, division: "core" },
   { id: "backend", labelKey: "net.backend", radius: 16, color: CYAN, glowColor: CYAN_DIM, division: "eng" },
@@ -48,6 +49,19 @@ const AGENT_DEFS: Omit<AgentNode, "x" | "y" | "vx" | "vy">[] = [
   { id: "pm", labelKey: "net.pm", radius: 15, color: AMBER, glowColor: AMBER_DIM, division: "product" },
   { id: "critic", labelKey: "net.critic", radius: 14, color: CYAN, glowColor: CYAN_DIM, division: "core" },
   { id: "researcher", labelKey: "net.researcher", radius: 13, color: AMBER, glowColor: AMBER_DIM, division: "core" },
+];
+
+// Workflow order: the actual collaboration sequence
+const WORKFLOW_ORDER = [
+  "conductor",   // 1. Conductor orchestrates everything
+  "researcher",  // 2. Researcher does technical research
+  "pm",          // 3. PM defines requirements
+  "ux",          // 4. UX designs the experience
+  "backend",     // 5. Backend builds the system
+  "frontend",    // 6. Frontend builds the UI
+  "devops",      // 7. DevOps deploys
+  "critic",      // 8. Critic reviews quality
+  "growth",      // 9. Growth optimizes
 ];
 
 const CONNECTIONS: Connection[] = [
@@ -69,10 +83,22 @@ const CONNECTIONS: Connection[] = [
   { from: "researcher", to: "pm", strength: 0.5 },
 ];
 
+// Agent info for the info panel
+const AGENT_INFO: Record<string, { roleKey: string; divKey: string }> = {
+  conductor: { roleKey: "net.tip.conductor", divKey: "net.div.core" },
+  backend: { roleKey: "net.tip.backend", divKey: "net.div.eng" },
+  frontend: { roleKey: "net.tip.frontend", divKey: "net.div.eng" },
+  devops: { roleKey: "net.tip.devops", divKey: "net.div.eng" },
+  ux: { roleKey: "net.tip.ux", divKey: "net.div.design" },
+  growth: { roleKey: "net.tip.growth", divKey: "net.div.growth" },
+  pm: { roleKey: "net.tip.pm", divKey: "net.div.product" },
+  critic: { roleKey: "net.tip.critic", divKey: "net.div.core" },
+  researcher: { roleKey: "net.tip.researcher", divKey: "net.div.core" },
+};
+
 function initNodes(w: number, h: number): AgentNode[] {
   const cx = w / 2;
   const cy = h / 2;
-  // Place conductor at center, others in a circle
   return AGENT_DEFS.map((def, i) => {
     if (def.id === "conductor") {
       return { ...def, x: cx, y: cy, vx: 0, vy: 0 };
@@ -111,11 +137,39 @@ export default function AgentNetwork() {
   const containerRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef<AgentNode[]>([]);
   const particlesRef = useRef<Particle[]>([]);
-  const hoveredRef = useRef<string | null>(null);
+  const activeIdRef = useRef<string>("conductor");
   const animRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
+  const [activeAgent, setActiveAgent] = useState<number>(0); // index in WORKFLOW_ORDER
   const [dimensions, setDimensions] = useState({ w: 600, h: 400 });
   const { t } = useI18n();
+
+  // The displayed agent: hover takes priority, otherwise auto-cycle
+  const displayedId = hoveredAgent !== null ? hoveredAgent : WORKFLOW_ORDER[activeAgent];
+  const displayedDef = AGENT_DEFS.find((a) => a.id === displayedId)!;
+  const displayedInfo = AGENT_INFO[displayedId];
+
+  // Keep ref in sync for canvas drawing
+  useEffect(() => {
+    activeIdRef.current = displayedId;
+  }, [displayedId]);
+
+  // Auto-cycle timer
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setActiveAgent((prev) => (prev + 1) % WORKFLOW_ORDER.length);
+    }, 2500);
+  }, []);
+
+  useEffect(() => {
+    startTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [startTimer]);
 
   // Resize handler
   useEffect(() => {
@@ -149,10 +203,21 @@ export default function AgentNetwork() {
         break;
       }
     }
-    hoveredRef.current = found;
-    setHoveredAgent(found);
+    if (found !== hoveredAgent) {
+      setHoveredAgent(found);
+      if (found) {
+        if (timerRef.current) clearInterval(timerRef.current);
+      } else {
+        startTimer();
+      }
+    }
     canvas.style.cursor = found ? "pointer" : "default";
-  }, []);
+  }, [hoveredAgent, startTimer]);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredAgent(null);
+    startTimer();
+  }, [startTimer]);
 
   // Animation loop
   useEffect(() => {
@@ -171,7 +236,7 @@ export default function AgentNetwork() {
     const draw = () => {
       const nodes = nodesRef.current;
       const particles = particlesRef.current;
-      const hovered = hoveredRef.current;
+      const hovered = activeIdRef.current;
       const w = canvas.width;
       const h = canvas.height;
 
@@ -182,10 +247,8 @@ export default function AgentNetwork() {
         if (node.id === "conductor") return;
         node.x += node.vx;
         node.y += node.vy;
-        // Bounce off edges
         if (node.x < node.radius + 10 || node.x > w - node.radius - 10) node.vx *= -1;
         if (node.y < node.radius + 10 || node.y > h - node.radius - 10) node.vy *= -1;
-        // Slight random drift
         node.vx += (Math.random() - 0.5) * 0.02;
         node.vy += (Math.random() - 0.5) * 0.02;
         node.vx *= 0.99;
@@ -219,7 +282,6 @@ export default function AgentNetwork() {
         p.progress += p.speed;
         if (p.progress > 1) {
           p.progress = 0;
-          // Swap direction randomly
           if (Math.random() > 0.5) {
             const tmp = p.fromId;
             p.fromId = p.toId;
@@ -260,6 +322,17 @@ export default function AgentNetwork() {
           ctx.fill();
         }
 
+        // Pulsing ring for active agent
+        if (isHovered) {
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, r * 1.6, 0, Math.PI * 2);
+          ctx.strokeStyle = node.color === CYAN
+            ? "rgba(0, 212, 255, 0.2)"
+            : "rgba(255, 179, 71, 0.2)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
         // Node circle
         ctx.beginPath();
         ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
@@ -296,50 +369,110 @@ export default function AgentNetwork() {
     return () => cancelAnimationFrame(animRef.current);
   }, [dimensions, t]);
 
-  // Tooltip data
-  const agentInfo: Record<string, { roleKey: string; divKey: string }> = {
-    conductor: { roleKey: "net.tip.conductor", divKey: "net.div.core" },
-    backend: { roleKey: "net.tip.backend", divKey: "net.div.eng" },
-    frontend: { roleKey: "net.tip.frontend", divKey: "net.div.eng" },
-    devops: { roleKey: "net.tip.devops", divKey: "net.div.eng" },
-    ux: { roleKey: "net.tip.ux", divKey: "net.div.design" },
-    growth: { roleKey: "net.tip.growth", divKey: "net.div.growth" },
-    pm: { roleKey: "net.tip.pm", divKey: "net.div.product" },
-    critic: { roleKey: "net.tip.critic", divKey: "net.div.core" },
-    researcher: { roleKey: "net.tip.researcher", divKey: "net.div.core" },
-  };
-
   return (
-    <div ref={containerRef} className="relative w-full h-[400px] sm:h-[450px]">
-      <canvas
-        ref={canvasRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => { hoveredRef.current = null; setHoveredAgent(null); }}
-        className="w-full h-full"
-      />
-      {/* Tooltip */}
-      {hoveredAgent && agentInfo[hoveredAgent] && (
-        <div className="absolute bottom-4 left-4 glass-card rounded-lg px-4 py-3 max-w-[240px] pointer-events-none">
-          <div className="flex items-center gap-2 mb-1">
-            <div className={`w-2 h-2 rounded-full ${
-              AGENT_DEFS.find(a => a.id === hoveredAgent)?.color === CYAN ? "bg-prism-cyan" : "bg-prism-amber"
-            }`} />
-            <span className="font-mono text-xs font-semibold text-foreground">{t(AGENT_DEFS.find(a => a.id === hoveredAgent)?.labelKey || "")}</span>
-            <span className="text-xs text-muted-foreground font-mono">· {t(agentInfo[hoveredAgent].divKey)}</span>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">{t(agentInfo[hoveredAgent].roleKey)}</p>
+    <div className="relative w-full">
+      {/* Canvas area */}
+      <div ref={containerRef} className="relative w-full h-[380px] sm:h-[420px]">
+        <canvas
+          ref={canvasRef}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          className="w-full h-full"
+        />
+        {/* Legend */}
+        <div className="absolute top-3 right-3 flex items-center gap-4 text-[10px] font-mono text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-prism-cyan" />
+            {t("net.legend.tech")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-prism-amber" />
+            {t("net.legend.biz")}
+          </span>
         </div>
-      )}
-      {/* Legend */}
-      <div className="absolute top-3 right-3 flex items-center gap-4 text-[10px] font-mono text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-prism-cyan" />
-          {t("net.legend.tech")}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-prism-amber" />
-          {t("net.legend.biz")}
-        </span>
+      </div>
+
+      {/* Bottom info panel — synced with active/hovered agent */}
+      <div
+        className="mt-3 rounded-lg p-4 transition-all duration-500 border"
+        style={{
+          borderColor: displayedDef.color + "40",
+          backgroundColor: displayedDef.color + "08",
+        }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <div
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: displayedDef.color }}
+            />
+            <span
+              className="text-base font-display font-bold"
+              style={{ color: displayedDef.color }}
+            >
+              {t(displayedDef.labelKey)}
+            </span>
+            <span className="text-xs text-muted-foreground font-mono">
+              · {t(displayedInfo.divKey)}
+            </span>
+          </div>
+        </div>
+        <p className="text-muted-foreground text-sm leading-relaxed mt-2">
+          {t(displayedInfo.roleKey)}
+        </p>
+
+        {/* Connected agents */}
+        <div className="flex items-center gap-2 mt-2.5 text-xs font-mono flex-wrap">
+          <span className="text-muted-foreground/60">
+            {t("net.legend.tech") === "技术智能体" ? "协作:" : "Connects:"}
+          </span>
+          {CONNECTIONS
+            .filter((c) => c.from === displayedId || c.to === displayedId)
+            .map((c) => {
+              const otherId = c.from === displayedId ? c.to : c.from;
+              const otherDef = AGENT_DEFS.find((a) => a.id === otherId);
+              if (!otherDef) return null;
+              return (
+                <span
+                  key={otherId}
+                  className="px-1.5 py-0.5 rounded text-[10px]"
+                  style={{
+                    color: otherDef.color,
+                    backgroundColor: otherDef.color + "15",
+                    border: `1px solid ${otherDef.color}25`,
+                  }}
+                >
+                  {t(otherDef.labelKey)}
+                </span>
+              );
+            })}
+        </div>
+
+        {/* Workflow indicator dots */}
+        <div className="flex items-center gap-1.5 mt-3">
+          {WORKFLOW_ORDER.map((agentId, i) => {
+            const def = AGENT_DEFS.find((a) => a.id === agentId)!;
+            const isActive = displayedId === agentId;
+            return (
+              <button
+                key={agentId}
+                onClick={() => {
+                  setActiveAgent(i);
+                  setHoveredAgent(null);
+                  startTimer();
+                }}
+                className="transition-all duration-300"
+                style={{
+                  width: isActive ? 20 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: isActive ? def.color : def.color + "40",
+                }}
+                aria-label={agentId}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );
