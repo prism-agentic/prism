@@ -38,3 +38,32 @@
 - [ ] 导出/分享任务结果
 - [ ] Navbar 移动端汉堡菜单
 - [ ] 滚动进入动画
+
+## Phase 5 — LLM 驱动智能体
+- [x] 研究内置 invokeLLM 接口
+- [x] 设计 9 个智能体的 system prompt
+- [x] 实现上下文传递链（前一个智能体输出 → 下一个智能体输入）
+- [x] 改造 agentSimulator 为 LLM 驱动
+- [x] 优化 Workspace 前端展示 Markdown 富文本
+- [x] 添加 LLM 调用重试机制（3次重试+指数退避）
+- [x] 保存 checkpoint
+
+## Phase 6 — 任务结果结构化展示与导出
+- [x] 创建 TaskResults 组件：按智能体角色分类展示交付物
+- [x] 实现交付物分类标签页（需求文档/技术设计/代码/策略）
+- [x] 支持 Markdown 全文导出
+- [x] 支持单个智能体输出复制/导出
+- [x] 添加任务结果概览卡片
+
+## Phase 7 — Agent Monitor 实时监控页面
+- [x] 创建 /monitor/:taskId 路由和页面
+- [x] 实现智能体协作网络可视化（实时状态）
+- [x] 显示各智能体工作进度和耗时统计
+- [x] 添加流水线阶段进度条
+
+## Phase 8 — Workspace 交互增强
+- [x] 改进任务完成后的结果展示区域
+- [x] 添加任务历史详情查看
+- [x] 优化移动端 Workspace 布局
+- [x] 编写/更新 vitest 测试
+- [ ] 保存 checkpoint

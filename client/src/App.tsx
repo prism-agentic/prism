@@ -12,6 +12,8 @@ const Home = lazy(() => import("./pages/Home"));
 const Docs = lazy(() => import("./pages/Docs"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Workspace = lazy(() => import("./pages/Workspace"));
+const TaskResults = lazy(() => import("./pages/TaskResults"));
+const AgentMonitor = lazy(() => import("./pages/AgentMonitor"));
 
 function LoadingFallback() {
   return (
@@ -32,6 +34,8 @@ function Router() {
         <Route path={"/docs"} component={Docs} />
         <Route path={"/dashboard"} component={Dashboard} />
         <Route path={"/workspace/:id"} component={Workspace} />
+        <Route path={"/results/:taskId"} component={TaskResults} />
+        <Route path={"/monitor/:taskId"} component={AgentMonitor} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
       </Switch>

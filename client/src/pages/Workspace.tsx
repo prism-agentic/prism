@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation } from "wouter";
+import { Streamdown } from "streamdown";
 import {
   ArrowLeft,
   Send,
@@ -14,22 +15,27 @@ import {
   Sparkles,
   Activity,
   ChevronRight,
-  Play,
-  Pause,
+  ChevronDown,
   Terminal,
+  Copy,
+  Check,
+  ExternalLink,
+  FileText,
+  BarChart3,
+  Eye,
 } from "lucide-react";
 
 // Agent definitions
 const AGENTS: Record<string, { name: string; color: string; emoji: string }> = {
-  conductor: { name: "Conductor", color: "#00d4ff", emoji: "🎯" },
-  researcher: { name: "Researcher", color: "#00d4ff", emoji: "🔍" },
-  pm: { name: "Product Manager", color: "#f59e0b", emoji: "📋" },
-  ux: { name: "UX Designer", color: "#f59e0b", emoji: "🎨" },
-  backend: { name: "Backend Architect", color: "#00d4ff", emoji: "⚙️" },
-  frontend: { name: "Frontend Dev", color: "#00d4ff", emoji: "💻" },
-  devops: { name: "DevOps Engineer", color: "#00d4ff", emoji: "🚀" },
-  critic: { name: "Quality Critic", color: "#00d4ff", emoji: "🔎" },
-  growth: { name: "Growth Hacker", color: "#f59e0b", emoji: "📈" },
+  conductor: { name: "Conductor", color: "#00d4ff", emoji: "\u{1F3AF}" },
+  researcher: { name: "Researcher", color: "#00d4ff", emoji: "\u{1F50D}" },
+  pm: { name: "Product Manager", color: "#f59e0b", emoji: "\u{1F4CB}" },
+  ux: { name: "UX Designer", color: "#f59e0b", emoji: "\u{1F3A8}" },
+  backend: { name: "Backend Architect", color: "#00d4ff", emoji: "\u2699\uFE0F" },
+  frontend: { name: "Frontend Dev", color: "#00d4ff", emoji: "\u{1F4BB}" },
+  devops: { name: "DevOps Engineer", color: "#00d4ff", emoji: "\u{1F680}" },
+  critic: { name: "Quality Critic", color: "#00d4ff", emoji: "\u{1F50E}" },
+  growth: { name: "Growth Hacker", color: "#f59e0b", emoji: "\u{1F4C8}" },
 };
 
 const PHASE_NAMES = ["Discover", "Strategy", "Scaffold", "Build", "Harden", "Launch"];
@@ -52,7 +58,7 @@ function PhaseIndicator({ currentPhase, totalPhases, status }: { currentPhase: n
               }`}
               title={PHASE_NAMES[i]}
             >
-              {isDone ? "✓" : i}
+              {isDone ? "\u2713" : i}
             </div>
             {i < totalPhases - 1 && (
               <div className={`w-4 h-0.5 ${isDone ? "bg-emerald-500/50" : "bg-border"}`} />
@@ -64,8 +70,32 @@ function PhaseIndicator({ currentPhase, totalPhases, status }: { currentPhase: n
   );
 }
 
-function AgentLogEntry({ log }: { log: any }) {
-  const agent = AGENTS[log.agentRole] || { name: log.agentName, color: "#888", emoji: "🤖" };
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      className="p-1 rounded hover:bg-white/10 transition-colors"
+      title="Copy content"
+    >
+      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
+    </button>
+  );
+}
+
+function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
+  const agent = AGENTS[log.agentRole] || { name: log.agentName, color: "#888", emoji: "\u{1F916}" };
+  const [expanded, setExpanded] = useState(false);
+  const isDone = log.status === "done";
+  const hasLongContent = isDone && log.content && log.content.length > 200;
+
+  // Auto-expand the latest "done" log, or if it's still working
+  const shouldAutoExpand = isLatest && (log.status === "working" || log.status === "done");
+
   const statusMap: Record<string, React.ReactNode> = {
     thinking: <Loader2 className="w-3.5 h-3.5 animate-spin text-prism-cyan" />,
     working: <Activity className="w-3.5 h-3.5 text-prism-amber animate-pulse" />,
@@ -75,34 +105,72 @@ function AgentLogEntry({ log }: { log: any }) {
   };
   const statusIcon = statusMap[log.status as string] || <Clock className="w-3.5 h-3.5 text-muted-foreground" />;
 
+  const isExpanded = expanded || shouldAutoExpand;
+
   return (
-    <div className="flex gap-3 py-2.5 px-3 rounded-lg hover:bg-card/50 transition-colors group">
-      <div className="flex-shrink-0 mt-0.5">
-        <div
-          className="w-7 h-7 rounded-md flex items-center justify-center text-sm"
-          style={{ backgroundColor: `${agent.color}15`, border: `1px solid ${agent.color}30` }}
-        >
-          {agent.emoji}
+    <div className="rounded-lg hover:bg-card/50 transition-colors group border border-transparent hover:border-border/30">
+      {/* Header — always visible */}
+      <div
+        className={`flex gap-3 py-2.5 px-3 ${hasLongContent ? "cursor-pointer" : ""}`}
+        onClick={() => hasLongContent && setExpanded(!expanded)}
+      >
+        <div className="flex-shrink-0 mt-0.5">
+          <div
+            className="w-7 h-7 rounded-md flex items-center justify-center text-sm"
+            style={{ backgroundColor: `${agent.color}15`, border: `1px solid ${agent.color}30` }}
+          >
+            {agent.emoji}
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold" style={{ color: agent.color }}>{agent.name}</span>
+            {statusIcon}
+            <span className="text-xs text-muted-foreground font-mono">
+              {log.action}
+            </span>
+            <span className="ml-auto flex items-center gap-1">
+              {log.durationMs && (
+                <span className="text-[10px] text-muted-foreground/60 font-mono">{(log.durationMs / 1000).toFixed(1)}s</span>
+              )}
+              {hasLongContent && (
+                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+              )}
+              {isDone && log.content && <CopyButton text={log.content} />}
+            </span>
+          </div>
+
+          {/* Short preview when collapsed */}
+          {isDone && log.content && !isExpanded && (
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{log.content.substring(0, 150)}...</p>
+          )}
+
+          {/* Working status message */}
+          {log.status === "working" && log.content && (
+            <p className="text-xs text-prism-amber/70 mt-1 flex items-center gap-1">
+              <Activity className="w-3 h-3 animate-pulse" />
+              {log.content}
+            </p>
+          )}
         </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold" style={{ color: agent.color }}>{agent.name}</span>
-          {statusIcon}
-          <span className="text-xs text-muted-foreground ml-auto font-mono">
-            P{log.phase}
-          </span>
+
+      {/* Expanded content — Markdown rendered */}
+      {isDone && log.content && isExpanded && (
+        <div className="px-3 pb-3 pl-[52px]">
+          <div className="rounded-lg bg-background/50 border border-border/30 p-4 text-sm prose prose-invert prose-sm max-w-none
+            prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2
+            prose-p:text-foreground/80 prose-p:leading-relaxed
+            prose-li:text-foreground/80
+            prose-code:text-prism-cyan prose-code:bg-prism-cyan/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+            prose-pre:bg-[#0a1628] prose-pre:border prose-pre:border-border/30 prose-pre:rounded-lg
+            prose-strong:text-foreground
+            prose-a:text-prism-cyan prose-a:no-underline hover:prose-a:underline
+          ">
+            <Streamdown>{log.content}</Streamdown>
+          </div>
         </div>
-        {log.action && (
-          <p className="text-sm text-foreground/80 mt-0.5">{log.action}</p>
-        )}
-        {log.content && log.status !== "thinking" && (
-          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{log.content}</p>
-        )}
-        {log.durationMs && (
-          <span className="text-[10px] text-muted-foreground/60 font-mono">{(log.durationMs / 1000).toFixed(1)}s</span>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -186,6 +254,9 @@ export default function Workspace() {
   const logs: Array<{ id: number; taskId: number; agentName: string; agentRole: string; phase: number | null; action: string | null; content: string | null; status: string; durationMs: number | null; createdAt: Date }> = (logsQuery.data || []) as any;
   const tasks = tasksQuery.data || [];
 
+  // Find the latest "done" log for auto-expand
+  const latestDoneLogId = [...logs].reverse().find(l => l.status === "done")?.id;
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Top Bar */}
@@ -198,20 +269,43 @@ export default function Workspace() {
             </Link>
             <ChevronRight className="w-3 h-3 text-border" />
             <span className="font-display font-semibold text-sm truncate max-w-[200px]">{project.name}</span>
-            {project.status === "running" && (
+            {activeTask?.status === "running" && (
               <span className="flex items-center gap-1 text-xs text-prism-cyan">
                 <span className="w-1.5 h-1.5 rounded-full bg-prism-cyan animate-pulse" />
-                Running
+                AI Agents Working...
               </span>
             )}
           </div>
-          {activeTask && (
-            <PhaseIndicator
-              currentPhase={activeTask.currentPhase || 0}
-              totalPhases={activeTask.totalPhases || 6}
-              status={activeTask.status}
-            />
-          )}
+          <div className="flex items-center gap-2">
+            {activeTaskId && (
+              <>
+                <Link
+                  href={`/monitor/${activeTaskId}`}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all text-muted-foreground hover:text-prism-cyan"
+                >
+                  <BarChart3 className="w-3 h-3" />
+                  Monitor
+                </Link>
+                {activeTask?.status === "completed" && (
+                  <Link
+                    href={`/results/${activeTaskId}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-prism-cyan/10 border border-prism-cyan/30 text-prism-cyan hover:bg-prism-cyan/20 transition-all"
+                  >
+                    <FileText className="w-3 h-3" />
+                    <span className="hidden sm:inline">View Results</span>
+                    <span className="sm:hidden">Results</span>
+                  </Link>
+                )}
+              </>
+            )}
+            {activeTask && (
+              <PhaseIndicator
+                currentPhase={activeTask.currentPhase || 0}
+                totalPhases={activeTask.totalPhases || 6}
+                status={activeTask.status}
+              />
+            )}
+          </div>
         </div>
       </nav>
 
@@ -265,16 +359,16 @@ export default function Workspace() {
                   const showPhaseHeader = i === 0 || log.phase !== logs[i - 1]?.phase;
                   return (
                     <div key={log.id}>
-                      {showPhaseHeader && (
+                      {showPhaseHeader && log.phase != null && (
                         <div className="flex items-center gap-2 py-3 mt-2 first:mt-0">
                           <div className="h-px flex-1 bg-border/50" />
-                          <span className="text-xs font-mono text-prism-cyan/70 uppercase tracking-widest">
-                            Phase {log.phase}: {PHASE_NAMES[log.phase as number] || `Phase ${log.phase}`}
+                          <span className="text-xs font-mono text-prism-cyan/70 uppercase tracking-wider">
+                            Phase {log.phase}: {PHASE_NAMES[log.phase] ?? ""}
                           </span>
                           <div className="h-px flex-1 bg-border/50" />
                         </div>
                       )}
-                      <AgentLogEntry log={log} />
+                      <AgentLogEntry log={log} isLatest={log.id === latestDoneLogId} />
                     </div>
                   );
                 })}
@@ -302,18 +396,39 @@ export default function Workspace() {
             )}
           </div>
 
-          {/* Task Result */}
+          {/* Task Result — Enhanced */}
           {activeTask?.status === "completed" && activeTask.result != null && (
             <div className="mx-4 mb-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span className="text-sm font-semibold text-emerald-400">Task Completed</span>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-400">Pipeline Complete</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/monitor/${activeTaskId}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all text-muted-foreground hover:text-prism-cyan"
+                  >
+                    <BarChart3 className="w-3 h-3" />
+                    Monitor
+                  </Link>
+                  <Link
+                    href={`/results/${activeTaskId}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md bg-prism-cyan text-prism-navy hover:bg-prism-cyan/90 transition-colors"
+                  >
+                    <Eye className="w-3 h-3" />
+                    View Full Results
+                  </Link>
+                </div>
               </div>
               <p className="text-sm text-foreground/80">
                 {(() => {
                   const r = activeTask.result as Record<string, unknown> | null;
                   return String(r?.summary ?? "Task completed successfully.");
                 })()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Click "View Full Results" to see all deliverables organized by category, with export options.
               </p>
             </div>
           )}
