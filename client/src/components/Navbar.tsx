@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Github, BookOpen, Terminal, Globe } from "lucide-react";
+import { Menu, X, Github, BookOpen, Globe } from "lucide-react";
 import { useI18n } from "@/contexts/I18nContext";
 
 const NAV_KEYS = [
@@ -31,9 +31,11 @@ export default function Navbar() {
         <div className="glass-card rounded-xl px-6 py-3 flex items-center justify-between">
           {/* Logo */}
           <a href="#" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-prism-cyan to-prism-amber flex items-center justify-center">
-              <Terminal className="w-4 h-4 text-prism-navy" strokeWidth={2.5} />
-            </div>
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-logo_2f15d31f.png"
+              alt="PRISM Logo"
+              className="w-8 h-8 rounded-lg object-cover"
+            />
             <span className="font-display text-lg font-bold tracking-tight text-foreground">
               PRISM
             </span>

@@ -244,9 +244,11 @@ export default function Docs() {
             </Link>
             <div className="h-5 w-px bg-border/50" />
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-prism-cyan to-prism-amber flex items-center justify-center">
-                <Terminal className="w-3 h-3 text-prism-navy" strokeWidth={2.5} />
-              </div>
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-logo_2f15d31f.png"
+                alt="PRISM Logo"
+                className="w-6 h-6 rounded-md object-cover"
+              />
               <span className="font-display font-bold text-sm text-foreground">PRISM Docs</span>
             </div>
           </div>
