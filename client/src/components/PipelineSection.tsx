@@ -1,13 +1,12 @@
 /*
  * PRISM Pipeline Section — Neural Constellation Design
- * Showcases the 6-phase quality-gated pipeline
+ * Showcases the 6-phase quality-gated pipeline with SVG diagram
  */
 import { motion } from "framer-motion";
 import { Search, Target, Layers, Hammer, ShieldCheck, Rocket, type LucideIcon } from "lucide-react";
 import { useI18n } from "@/contexts/I18nContext";
 import { RichText } from "@/components/RichText";
-
-const PIPELINE_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-flow-pipeline-HARo9g2Ut5rrobuYfQvfcj.webp";
+import PipelineDiagram from "@/components/PipelineDiagram";
 
 interface PhaseDef {
   icon: LucideIcon;
@@ -50,7 +49,7 @@ export default function PipelineSection() {
           </p>
         </motion.div>
 
-        {/* Pipeline image */}
+        {/* Pipeline SVG Diagram */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -58,13 +57,8 @@ export default function PipelineSection() {
           transition={{ duration: 0.7 }}
           className="mb-16"
         >
-          <div className="glass-card rounded-xl p-2 glow-cyan">
-            <img
-              src={PIPELINE_IMG}
-              alt="PRISM Flow Pipeline"
-              className="rounded-lg w-full"
-              loading="lazy"
-            />
+          <div className="glass-card rounded-xl p-4 glow-cyan">
+            <PipelineDiagram />
           </div>
         </motion.div>
 
