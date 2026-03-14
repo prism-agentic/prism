@@ -1,10 +1,11 @@
 /*
  * PRISM Architecture Section — Neural Constellation Design
- * Showcases the layered architecture with generated visual
+ * Showcases the layered architecture + interactive agent collaboration network
  */
 import { motion } from "framer-motion";
 import { useI18n } from "@/contexts/I18nContext";
 import { RichText } from "@/components/RichText";
+import AgentNetwork from "@/components/AgentNetwork";
 
 const ARCH_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-architecture-kbKQ8nXipHruTLeYyeezwM.webp";
 
@@ -90,6 +91,27 @@ export default function ArchitectureSection() {
             ))}
           </div>
         </div>
+
+        {/* Interactive Agent Network */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.7, delay: 0.2 }}
+          className="mt-20"
+        >
+          <div className="text-center mb-6">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-foreground">
+              {t("net.section.title")}
+            </h3>
+            <p className="text-muted-foreground text-sm mt-2 font-mono">
+              {t("net.section.desc")}
+            </p>
+          </div>
+          <div className="glass-card rounded-xl p-3 glow-cyan">
+            <AgentNetwork />
+          </div>
+        </motion.div>
       </div>
     </section>
   );

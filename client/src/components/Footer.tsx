@@ -32,9 +32,7 @@ export default function Footer() {
               GitHub
             </a>
             <a
-              href="https://github.com/prism-agentic/prism#readme"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/docs"
               className="hover:text-prism-cyan transition-colors"
             >
               {t("footer.docs")}

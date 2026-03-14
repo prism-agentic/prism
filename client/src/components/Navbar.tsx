@@ -71,9 +71,7 @@ export default function Navbar() {
               <Github className="w-5 h-5" />
             </a>
             <a
-              href="https://github.com/prism-agentic/prism#readme"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/docs"
               className="px-4 py-2 text-sm font-medium bg-prism-cyan/10 text-prism-cyan border border-prism-cyan/30 rounded-lg hover:bg-prism-cyan/20 transition-all"
             >
               <BookOpen className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
@@ -126,9 +124,7 @@ export default function Navbar() {
                   <Github className="w-5 h-5" />
                 </a>
                 <a
-                  href="https://github.com/prism-agentic/prism#readme"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/docs"
                   className="px-4 py-2 text-sm font-medium bg-prism-cyan/10 text-prism-cyan border border-prism-cyan/30 rounded-lg"
                 >
                   {t("nav.docs")}
