@@ -3,7 +3,7 @@
  * Full-bleed hero with constellation background, asymmetric layout
  */
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+
 import { useI18n } from "@/contexts/I18nContext";
 import { RichText } from "@/components/RichText";
 
@@ -36,17 +36,6 @@ export default function HeroSection() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            {/* Badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-prism-cyan/30 bg-prism-cyan/5 text-prism-cyan text-sm font-mono"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              {t("hero.badge")}
-            </motion.div>
-
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold leading-[1.1] tracking-tight">
               <span className="text-foreground">{t("hero.title.line1")}</span>
