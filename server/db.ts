@@ -114,7 +114,7 @@ export async function getProjectById(id: number, userId: number) {
   return result[0];
 }
 
-export async function updateProject(id: number, userId: number, data: Partial<Pick<InsertProject, 'name' | 'description' | 'status' | 'agentConfig'>>) {
+export async function updateProject(id: number, userId: number, data: Partial<Pick<InsertProject, 'name' | 'description' | 'status' | 'agentConfig' | 'modelId'>>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(projects).set(data).where(and(eq(projects.id, id), eq(projects.userId, userId)));

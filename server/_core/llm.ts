@@ -66,6 +66,8 @@ export type InvokeParams = {
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
+  /** Override the default model. For OpenRouter, use full model ID (e.g. "anthropic/claude-3.5-sonnet") */
+  model?: string;
 };
 
 export type ToolCall = {
@@ -303,8 +305,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
-  // Use OpenRouter model ID format when using OpenRouter
-  const modelName = isUsingOpenRouter() ? "google/gemini-2.5-flash" : "gemini-2.5-flash";
+  // Use explicit model if provided, otherwise default based on backend
+  const modelName = params.model
+    ? params.model
+    : isUsingOpenRouter()
+      ? "google/gemini-2.5-flash"
+      : "gemini-2.5-flash";
 
   const payload: Record<string, unknown> = {
     model: modelName,

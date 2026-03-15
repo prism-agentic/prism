@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `modelId` varchar(128) DEFAULT 'google/gemini-2.5-flash';

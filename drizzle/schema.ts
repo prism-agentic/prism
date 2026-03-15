@@ -29,6 +29,8 @@ export const projects = mysqlTable("projects", {
   template: varchar("template", { length: 64 }).default("custom"),
   status: mysqlEnum("status", ["idle", "running", "completed", "failed"]).default("idle").notNull(),
   agentConfig: json("agentConfig"),
+  /** OpenRouter model ID selected by user (e.g. "google/gemini-2.5-flash", "anthropic/claude-3.5-sonnet") */
+  modelId: varchar("modelId", { length: 128 }).default("google/gemini-2.5-flash"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

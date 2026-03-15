@@ -7,6 +7,93 @@ import * as db from "./db";
 import { simulateAgentPipeline } from "./agentSimulator";
 import { runMeetingRound1, handleUserReply, generateRequirementsBrief } from "./requirementMeeting";
 
+// ─── Available Models ───
+
+export interface AvailableModel {
+  id: string;
+  name: string;
+  provider: string;
+  description: string;
+  contextWindow: number;
+  pricing: string;
+  tier: "free" | "standard" | "premium";
+}
+
+export const AVAILABLE_MODELS: AvailableModel[] = [
+  {
+    id: "google/gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    provider: "Google",
+    description: "Fast reasoning model, great for most tasks. Low cost.",
+    contextWindow: 1048576,
+    pricing: "$0.15 / 1M tokens",
+    tier: "free",
+  },
+  {
+    id: "google/gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
+    provider: "Google",
+    description: "Google's most capable model with advanced reasoning.",
+    contextWindow: 1048576,
+    pricing: "$2.50 / 1M tokens",
+    tier: "premium",
+  },
+  {
+    id: "anthropic/claude-sonnet-4",
+    name: "Claude Sonnet 4",
+    provider: "Anthropic",
+    description: "Excellent at analysis, writing, and coding tasks.",
+    contextWindow: 200000,
+    pricing: "$3.00 / 1M tokens",
+    tier: "premium",
+  },
+  {
+    id: "anthropic/claude-3.5-sonnet",
+    name: "Claude 3.5 Sonnet",
+    provider: "Anthropic",
+    description: "Strong balance of intelligence and speed.",
+    contextWindow: 200000,
+    pricing: "$3.00 / 1M tokens",
+    tier: "standard",
+  },
+  {
+    id: "openai/gpt-4o",
+    name: "GPT-4o",
+    provider: "OpenAI",
+    description: "OpenAI's flagship multimodal model.",
+    contextWindow: 128000,
+    pricing: "$2.50 / 1M tokens",
+    tier: "standard",
+  },
+  {
+    id: "openai/gpt-4o-mini",
+    name: "GPT-4o Mini",
+    provider: "OpenAI",
+    description: "Fast and affordable for simpler tasks.",
+    contextWindow: 128000,
+    pricing: "$0.15 / 1M tokens",
+    tier: "free",
+  },
+  {
+    id: "deepseek/deepseek-r1",
+    name: "DeepSeek R1",
+    provider: "DeepSeek",
+    description: "Advanced reasoning model with strong coding ability.",
+    contextWindow: 64000,
+    pricing: "$0.55 / 1M tokens",
+    tier: "standard",
+  },
+  {
+    id: "meta-llama/llama-4-maverick",
+    name: "Llama 4 Maverick",
+    provider: "Meta",
+    description: "Open-source model with strong general capabilities.",
+    contextWindow: 1048576,
+    pricing: "$0.20 / 1M tokens",
+    tier: "free",
+  },
+];
+
 // ─── Task Templates ───
 
 export interface TaskTemplate {
@@ -119,11 +206,31 @@ export const appRouter = router({
         id: z.number(),
         name: z.string().min(1).max(200).optional(),
         description: z.string().optional(),
+        modelId: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const { id, ...data } = input;
         await db.updateProject(id, ctx.user.id, data);
         return { success: true };
+      }),
+
+    /** Get available LLM models for selection */
+    availableModels: protectedProcedure.query(() => {
+      return AVAILABLE_MODELS;
+    }),
+
+    /** Update the model for a project */
+    updateModel: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        modelId: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Validate model exists in our list
+        const model = AVAILABLE_MODELS.find(m => m.id === input.modelId);
+        if (!model) throw new Error("Invalid model ID");
+        await db.updateProject(input.id, ctx.user.id, { modelId: input.modelId });
+        return { success: true, model };
       }),
 
     delete: protectedProcedure
@@ -175,12 +282,16 @@ export const appRouter = router({
           meetingRound: 0,
         });
 
+        // Get the project's model preference
+        const project = await db.getProjectById(input.projectId, ctx.user.id);
+        const modelId = project?.modelId || undefined;
+
         if (input.skipMeeting) {
           // Fast mode: skip meeting, go directly to pipeline
-          simulateAgentPipeline(task.id, input.prompt).catch(console.error);
+          simulateAgentPipeline(task.id, input.prompt, undefined, modelId).catch(console.error);
         } else {
           // Normal mode: start requirement meeting
-          runMeetingRound1(task.id, input.prompt).catch(console.error);
+          runMeetingRound1(task.id, input.prompt, modelId).catch(console.error);
         }
 
         return task;
@@ -200,7 +311,11 @@ export const appRouter = router({
         if (!task) throw new Error("Task not found");
         if (task.status !== "clarifying") throw new Error("Task is not in meeting phase");
 
-        const result = await handleUserReply(input.taskId, task.prompt, input.message);
+        // Get project model preference
+        const project = await db.getProjectById(task.projectId, ctx.user.id);
+        const modelId = project?.modelId || undefined;
+
+        const result = await handleUserReply(input.taskId, task.prompt, input.message, modelId);
         return result;
       }),
 
@@ -218,8 +333,12 @@ export const appRouter = router({
         if (!task) throw new Error("Task not found");
         if (task.status !== "clarifying") throw new Error("Task is not in meeting phase");
 
+        // Get project model preference
+        const project = await db.getProjectById(task.projectId, ctx.user.id);
+        const modelId = project?.modelId || undefined;
+
         // Generate requirements brief (PM synthesizes all meeting context)
-        const brief = await generateRequirementsBrief(input.taskId, task.prompt);
+        const brief = await generateRequirementsBrief(input.taskId, task.prompt, modelId);
 
         // Transition to confirming status — wait for user approval
         await db.updateTask(input.taskId, { status: "confirming" });
@@ -245,8 +364,12 @@ export const appRouter = router({
         const briefData = task.requirementsBrief as { brief: string; generatedAt: string } | null;
         const briefText = briefData?.brief || "";
 
+        // Get project model preference
+        const project = await db.getProjectById(task.projectId, ctx.user.id);
+        const modelId = project?.modelId || undefined;
+
         // Start pipeline execution with the approved brief
-        simulateAgentPipeline(input.taskId, task.prompt, briefText).catch(console.error);
+        simulateAgentPipeline(input.taskId, task.prompt, briefText, modelId).catch(console.error);
 
         return { success: true };
       }),

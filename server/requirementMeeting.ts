@@ -148,6 +148,7 @@ Be specific and actionable. This document will be the single source of truth for
 async function callMeetingAgent(
   systemPrompt: string,
   userMessage: string,
+  modelId?: string,
 ): Promise<string> {
   const MAX_RETRIES = 3;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -158,6 +159,7 @@ async function callMeetingAgent(
           { role: "user", content: userMessage },
         ],
         maxTokens: 3000,
+        ...(modelId ? { model: modelId } : {}),
       });
       const content = result.choices?.[0]?.message?.content;
       if (typeof content === "string") return content;
@@ -182,7 +184,7 @@ async function callMeetingAgent(
 
 // ─── Round 1: Fixed Analysis Chain ──────────────────────────────────
 
-export async function runMeetingRound1(taskId: number, prompt: string) {
+export async function runMeetingRound1(taskId: number, prompt: string, modelId?: string) {
   try {
     // Mark task as clarifying
     await updateTask(taskId, { status: "clarifying", meetingRound: 1 });
@@ -191,6 +193,7 @@ export async function runMeetingRound1(taskId: number, prompt: string) {
     const conductorOutput = await callMeetingAgent(
       MEETING_PROMPTS.conductor_round1,
       `## User's Task\n${prompt}`,
+      modelId,
     );
     await createMeetingMessage({
       taskId,
@@ -204,6 +207,7 @@ export async function runMeetingRound1(taskId: number, prompt: string) {
     const researcherOutput = await callMeetingAgent(
       MEETING_PROMPTS.researcher_round1,
       `## User's Task\n${prompt}\n\n## Conductor's Analysis\n${conductorOutput}`,
+      modelId,
     );
     await createMeetingMessage({
       taskId,
@@ -217,6 +221,7 @@ export async function runMeetingRound1(taskId: number, prompt: string) {
     const pmOutput = await callMeetingAgent(
       MEETING_PROMPTS.pm_round1,
       `## User's Task\n${prompt}\n\n## Conductor's Analysis\n${conductorOutput}\n\n## Researcher's Competitive Intelligence\n${researcherOutput}`,
+      modelId,
     );
     await createMeetingMessage({
       taskId,
@@ -242,7 +247,7 @@ export async function runMeetingRound1(taskId: number, prompt: string) {
 
 // ─── Round 2+: Intelligent Routing ──────────────────────────────────
 
-export async function handleUserReply(taskId: number, prompt: string, userReply: string) {
+export async function handleUserReply(taskId: number, prompt: string, userReply: string, modelId?: string) {
   // Save user message
   const messages = await getTaskMeetingMessages(taskId);
   const currentRound = Math.max(...messages.map(m => m.round), 0) + 1;
@@ -262,7 +267,7 @@ export async function handleUserReply(taskId: number, prompt: string, userReply:
 
   // Step 1: Conductor routes the reply
   const routerInput = `## Original Task\n${prompt}\n\n## Meeting History\n${meetingContext}\n\n## User's Latest Reply\n${userReply}`;
-  const routerOutput = await callMeetingAgent(MEETING_PROMPTS.conductor_router, routerInput);
+  const routerOutput = await callMeetingAgent(MEETING_PROMPTS.conductor_router, routerInput, modelId);
 
   let respondents: string[] = ["pm"];
   let isResolved = false;
@@ -301,7 +306,7 @@ export async function handleUserReply(taskId: number, prompt: string, userReply:
     const agentPrompt = followupPrompts[agent];
     if (!agentPrompt) continue;
 
-    const output = await callMeetingAgent(agentPrompt, fullContext);
+    const output = await callMeetingAgent(agentPrompt, fullContext, modelId);
     await createMeetingMessage({
       taskId,
       sender: agent,
@@ -319,7 +324,7 @@ export async function handleUserReply(taskId: number, prompt: string, userReply:
 
 // ─── Generate Requirements Brief ───────────────────────────────────
 
-export async function generateRequirementsBrief(taskId: number, prompt: string) {
+export async function generateRequirementsBrief(taskId: number, prompt: string, modelId?: string) {
   const messages = await getTaskMeetingMessages(taskId);
 
   const meetingTranscript = messages
@@ -330,7 +335,7 @@ export async function generateRequirementsBrief(taskId: number, prompt: string) 
     .join("\n\n---\n\n");
 
   const briefInput = `## Original Task\n${prompt}\n\n## Full Meeting Transcript\n${meetingTranscript}`;
-  const brief = await callMeetingAgent(MEETING_PROMPTS.pm_brief, briefInput);
+  const brief = await callMeetingAgent(MEETING_PROMPTS.pm_brief, briefInput, modelId);
 
   // Save the brief as a meeting message and in the task
   await createMeetingMessage({

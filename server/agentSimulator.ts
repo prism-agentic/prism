@@ -180,6 +180,7 @@ async function callAgent(
   agentRole: string,
   userPrompt: string,
   previousContext: string,
+  modelId?: string,
 ): Promise<string> {
   const systemPrompt = AGENT_PROMPTS[agentRole];
   if (!systemPrompt) {
@@ -202,7 +203,7 @@ async function callAgent(
   const MAX_RETRIES = 3;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const result = await invokeLLM({ messages, maxTokens: 4096 });
+      const result = await invokeLLM({ messages, maxTokens: 4096, ...(modelId ? { model: modelId } : {}) });
       const content = result.choices?.[0]?.message?.content;
       if (typeof content === "string") return content;
       if (Array.isArray(content)) {
@@ -228,7 +229,7 @@ async function callAgent(
 }
 
 // ─── Main Pipeline Executor ──────────────────────────────────────────
-export async function simulateAgentPipeline(taskId: number, prompt: string, requirementsBrief?: string) {
+export async function simulateAgentPipeline(taskId: number, prompt: string, requirementsBrief?: string, modelId?: string) {
   // Accumulates outputs from all agents for context passing
   const agentOutputs: Record<string, string> = {};
 
@@ -280,7 +281,7 @@ export async function simulateAgentPipeline(taskId: number, prompt: string, requ
 
         // Call LLM for real agent output
         const startTime = Date.now();
-        const output = await callAgent(agentRole, prompt, previousContext);
+        const output = await callAgent(agentRole, prompt, previousContext, modelId);
         const durationMs = Date.now() - startTime;
 
         // Store output for context chain

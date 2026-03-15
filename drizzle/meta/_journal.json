@@ -36,6 +36,13 @@
       "when": 1773547784758,
       "tag": "0004_common_franklin_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1773569476300,
+      "tag": "0005_odd_iron_lad",
+      "breakpoints": true
     }
   ]
 }

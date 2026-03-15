@@ -40,6 +40,7 @@ import {
   Save,
   X,
 } from "lucide-react";
+import ModelSelector from "@/components/ModelSelector";
 
 // ─── Agent Definitions ──────────────────────────────────────────────
 
@@ -1071,7 +1072,7 @@ export default function Workspace() {
           <div className="p-3 border-b border-border/50">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tasks</h3>
           </div>
-          <div className="p-2 space-y-1 max-h-[200px] lg:max-h-none overflow-y-auto flex lg:flex-col flex-row gap-1 lg:gap-0">
+          <div className="p-2 space-y-1 max-h-[200px] lg:max-h-[calc(100vh-220px)] overflow-y-auto flex lg:flex-col flex-row gap-1 lg:gap-0">
             {tasks.length === 0 ? (
               <p className="text-xs text-muted-foreground p-3">No tasks yet. Start one below.</p>
             ) : (
@@ -1104,6 +1105,11 @@ export default function Workspace() {
                 </button>
               ))
             )}
+          </div>
+          {/* Model Selector */}
+          <div className="hidden lg:block p-3 border-t border-border/50">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">AI Model</p>
+            <ModelSelector projectId={projectId} />
           </div>
         </div>
 

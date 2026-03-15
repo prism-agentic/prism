@@ -124,4 +124,15 @@
 - [x] 将 OpenRouter API Key 存储为环境变量
 - [x] 修改 server/_core/llm.ts，将 LLM 调用切换到 OpenRouter API
 - [x] 编写/更新 vitest 测试验证 OpenRouter 调用（65 个测试全部通过）
+- [x] 保存 checkpoint
+
+## Phase 13 — 模型选择功能（OpenRouter 多模型支持）
+- [x] 数据库：projects 表增加 modelId 字段存储用户选择的模型
+- [x] 后端：定义可用模型列表（Gemini 2.5 Flash、Claude 3.5 Sonnet、GPT-4o 等 8 个模型）
+- [x] 后端：新增 project.availableModels 查询 + project.updateModel mutation
+- [x] 后端：invokeLLM 支持动态 model 参数覆盖默认模型
+- [x] 后端：agentSimulator / requirementMeeting 全链路传递 modelId
+- [x] 前端：ModelSelector 组件（下拉选择器 + 模型信息卡片 + Tier 标签）
+- [x] 前端：Workspace 侧边栏集成模型选择器
+- [x] 编写/更新 vitest 测试（79 个测试全部通过）
 - [ ] 保存 checkpoint
