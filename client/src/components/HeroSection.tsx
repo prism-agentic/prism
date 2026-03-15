@@ -86,12 +86,7 @@ export default function HeroSection() {
                 {t("hero.cta.tryNow")}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button
-                onClick={() => document.querySelector("#quickstart")?.scrollIntoView({ behavior: "smooth" })}
-                className="inline-flex items-center gap-2 px-6 py-3 border border-border text-foreground font-medium rounded-lg hover:border-prism-cyan/50 hover:text-prism-cyan transition-all duration-300"
-              >
-                {t("hero.cta.quickstart")}
-              </button>
+
             </div>
 
             {/* Stats */}

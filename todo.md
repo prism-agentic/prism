@@ -141,4 +141,8 @@
 - [x] 修改 drizzle/schema.ts 中 agent_logs.content 和 meeting_messages.content 列类型为 longtext
 - [x] 推送数据库迁移
 - [x] 编写 vitest 测试验证（4 个测试通过）
+- [x] 保存 checkpoint
+
+## UI 优化 — 移除 Hero 区域"快速开始"按钮
+- [x] 移除首页 Hero 区域的“快速开始”按钮
 - [ ] 保存 checkpoint
