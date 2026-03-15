@@ -1,6 +1,7 @@
 /*
  * AnimatedTerminal — Typewriter-style terminal animation for Hero section
  * Simulates a PRISM AI Agent building workflow with progressive line reveals
+ * Terminal window stays fixed size; content scrolls up as new lines appear.
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 
@@ -132,7 +133,6 @@ function RenderedLine({
     return <ProgressBar onDone={onDone} />;
   }
   if (line.progress && !isActive) {
-    // Already completed progress bar
     return (
       <span className="text-prism-cyan">
         {"  进度 ["}<span className="text-prism-amber">{"█".repeat(20)}</span>{"] 100%"}
@@ -149,17 +149,22 @@ function RenderedLine({
       />
     );
   }
-  // Static text (either non-typewriter, or typewriter that's already done)
   return <span className={line.color || "text-muted-foreground"}>{line.text}</span>;
 }
 
 /* ── Main component ── */
 export default function AnimatedTerminal() {
-  // currentLine: index of the line currently being animated
-  // -1 means waiting to start, >= LINES.length means all done
   const [currentLine, setCurrentLine] = useState(-1);
   const [cycle, setCycle] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom whenever currentLine changes
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [currentLine]);
 
   // Start the first line after initial delay
   useEffect(() => {
@@ -169,12 +174,9 @@ export default function AnimatedTerminal() {
     return () => clearTimeout(timerRef.current);
   }, [cycle]);
 
-  // When a line finishes (typewriter/progress done, or static line shown),
-  // schedule the next line
   const handleLineDone = useCallback((lineIndex: number) => {
     const nextIndex = lineIndex + 1;
     if (nextIndex >= LINES.length) {
-      // All lines done, schedule restart
       timerRef.current = setTimeout(() => {
         setCurrentLine(-1);
         setCycle((c) => c + 1);
@@ -193,14 +195,11 @@ export default function AnimatedTerminal() {
     if (currentLine < 0 || currentLine >= LINES.length) return;
     const line = LINES[currentLine];
     if (!line.typewriter && !line.progress) {
-      // Static line: show it and immediately schedule next
-      // Use a small delay so the line renders first
       const timer = setTimeout(() => {
         handleLineDone(currentLine);
       }, 50);
       return () => clearTimeout(timer);
     }
-    // Typewriter and progress lines call handleLineDone themselves via onDone
   }, [currentLine, handleLineDone]);
 
   // Clean up on unmount
@@ -219,10 +218,13 @@ export default function AnimatedTerminal() {
         </div>
         <span className="text-xs text-muted-foreground font-mono ml-2">prism-cli</span>
       </div>
-      {/* Terminal body */}
-      <div className="p-4 font-mono text-sm leading-relaxed min-h-[320px]" key={cycle}>
+      {/* Terminal body — fixed height, content scrolls */}
+      <div
+        ref={scrollRef}
+        className="p-4 font-mono text-sm leading-relaxed h-[320px] overflow-y-auto scrollbar-hide"
+        key={cycle}
+      >
         {LINES.map((line, i) => {
-          // Only show lines up to currentLine
           if (i > currentLine) return null;
           const isActive = i === currentLine;
           return (
