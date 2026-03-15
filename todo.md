@@ -160,4 +160,9 @@
 
 ## Bugfix — 会议聊天自动滚动打断用户阅读
 - [x] 优化自动滚动逻辑：仅在用户已在底部时自动滚动，查看历史时不打断（会议 + 流水线两处均已修复）
+- [x] 保存 checkpoint
+
+## Bugfix — 智能体输出英文问题
+- [x] 将 requirementMeeting.ts 中所有智能体 system prompt 改为中文
+- [x] 将 agentSimulator.ts 中所有智能体 system prompt 改为中文（83 个测试全部通过）
 - [ ] 保存 checkpoint

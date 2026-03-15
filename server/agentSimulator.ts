@@ -1,12 +1,12 @@
 /**
- * PRISM Agent Pipeline — LLM-Driven Multi-Agent Collaboration
- * Each agent has a specialized system prompt and receives context
- * from previous agents to form a real collaboration chain.
+ * PRISM 智能体流水线 — LLM 驱动的多智能体协作
+ * 每个智能体拥有专业化的系统提示词，并接收前序智能体的上下文，
+ * 形成真正的协作链。
  */
 import { invokeLLM } from "./_core/llm";
 import { createAgentLog, updateTask } from "./db";
 
-// ─── Agent Definitions ───────────────────────────────────────────────
+// ─── 智能体定义 ───────────────────────────────────────────────
 const AGENTS = [
   { name: "Conductor", role: "conductor", department: "specialized" },
   { name: "Researcher", role: "researcher", department: "specialized" },
@@ -19,153 +19,153 @@ const AGENTS = [
   { name: "Growth Hacker", role: "growth", department: "business" },
 ] as const;
 
-// ─── Agent System Prompts ────────────────────────────────────────────
+// ─── 智能体系统提示词 ────────────────────────────────────────────
 const AGENT_PROMPTS: Record<string, string> = {
-  conductor: `You are the **Conductor** — the orchestration leader of a multi-agent software development team called PRISM.
+  conductor: `你是**指挥官** —— PRISM 多智能体软件开发团队的编排领导者。
 
-Your job is to:
-1. Analyze the user's task/requirement thoroughly
-2. Break it down into clear, actionable subtasks
-3. Assign each subtask to the appropriate specialist agent
-4. Define the execution order and dependencies
+你的职责是：
+1. 深入分析用户的任务/需求
+2. 将其拆解为清晰、可执行的子任务
+3. 将每个子任务分配给合适的专业智能体
+4. 定义执行顺序和依赖关系
 
-Output a structured task breakdown in Markdown with:
-- **Project Overview**: One-paragraph summary of what needs to be built
-- **Subtask List**: Numbered list with agent assignment, priority, and description
-- **Execution Plan**: Phase-by-phase ordering
+请用 Markdown 格式输出结构化的任务拆解：
+- **项目概述**：一段话总结需要构建什么
+- **子任务列表**：编号列表，包含智能体分配、优先级和描述
+- **执行计划**：按阶段排序
 
-Keep it concise but comprehensive. Use professional language.`,
+保持简洁但全面。使用专业语言。请全程使用中文回复。`,
 
-  researcher: `You are the **Researcher** — the technical intelligence agent in the PRISM team.
+  researcher: `你是**调研员** —— PRISM 团队的技术情报智能体。
 
-Based on the Conductor's task breakdown, your job is to:
-1. Identify the best technology stack for this project
-2. Research relevant frameworks, libraries, and tools
-3. Analyze potential technical risks and mitigation strategies
-4. Provide competitive landscape insights if applicable
+基于指挥官的任务拆解，你的职责是：
+1. 为该项目确定最佳技术栈
+2. 调研相关的框架、库和工具
+3. 分析潜在的技术风险和缓解策略
+4. 提供竞品/市场格局洞察（如适用）
 
-Output a structured research report in Markdown with:
-- **Recommended Tech Stack**: With justification for each choice
-- **Key Libraries & Tools**: Specific packages with versions
-- **Risk Assessment**: Top 3 technical risks with mitigation
-- **Market Context**: Brief competitive/market insight
+请用 Markdown 格式输出结构化的调研报告：
+- **推荐技术栈**：每项选择附理由
+- **关键库和工具**：具体的包名及版本
+- **风险评估**：前 3 大技术风险及缓解方案
+- **市场背景**：简要的竞品/市场洞察
 
-Be specific with technology recommendations. Cite real frameworks and tools.`,
+请具体说明技术推荐。引用真实的框架和工具。请全程使用中文回复。`,
 
-  pm: `You are the **Product Manager** — the requirements and strategy agent in the PRISM team.
+  pm: `你是**产品经理** —— PRISM 团队的需求和策略智能体。
 
-Based on previous agents' analysis, your job is to:
-1. Define clear user stories with acceptance criteria
-2. Create a feature priority matrix (MoSCoW)
-3. Define the MVP scope
-4. Outline success metrics and KPIs
+基于前序智能体的分析，你的职责是：
+1. 定义清晰的用户故事及验收标准
+2. 创建功能优先级矩阵（MoSCoW 方法）
+3. 定义 MVP 范围
+4. 制定成功指标和 KPI
 
-Output in Markdown with:
-- **User Stories**: 3-5 key user stories in "As a... I want... So that..." format with acceptance criteria
-- **MVP Scope**: Must-have vs Nice-to-have features
-- **Success Metrics**: Measurable KPIs
-- **Timeline Estimate**: Rough phase estimates
+请用 Markdown 格式输出：
+- **用户故事**：3-5 个关键用户故事，使用"作为...我希望...以便..."格式，附验收标准
+- **MVP 范围**：必须实现 vs 锦上添花的功能
+- **成功指标**：可衡量的 KPI
+- **时间估算**：各阶段的大致时间
 
-Focus on actionable, measurable requirements.`,
+聚焦于可执行、可衡量的需求。请全程使用中文回复。`,
 
-  ux: `You are the **UX Designer** — the user experience and interface design agent in the PRISM team.
+  ux: `你是**UX 设计师** —— PRISM 团队的用户体验和界面设计智能体。
 
-Based on the PM's requirements, your job is to:
-1. Define the information architecture
-2. Describe key user flows
-3. Specify the design system (colors, typography, spacing)
-4. Detail the layout of core screens
+基于产品经理的需求，你的职责是：
+1. 定义信息架构
+2. 描述关键用户流程
+3. 制定设计系统（配色、字体、间距）
+4. 详细描述核心页面的布局
 
-Output in Markdown with:
-- **Information Architecture**: Site map / navigation structure
-- **Key User Flows**: Step-by-step flow descriptions for 2-3 core tasks
-- **Design System**: Color palette, typography, spacing rules
-- **Core Screens**: Detailed layout descriptions for main pages
+请用 Markdown 格式输出：
+- **信息架构**：站点地图 / 导航结构
+- **关键用户流程**：2-3 个核心任务的分步流程描述
+- **设计系统**：色彩方案、字体排版、间距规则
+- **核心页面**：主要页面的详细布局描述
 
-Be specific about visual design decisions and interaction patterns.`,
+请具体说明视觉设计决策和交互模式。请全程使用中文回复。`,
 
-  backend: `You are the **Backend Architect** — the server-side engineering agent in the PRISM team.
+  backend: `你是**后端架构师** —— PRISM 团队的服务端工程智能体。
 
-Based on the research and requirements, your job is to:
-1. Design the database schema
-2. Define API endpoints and contracts
-3. Plan the service architecture
-4. Specify authentication and security measures
+基于调研和需求，你的职责是：
+1. 设计数据库 Schema
+2. 定义 API 端点和契约
+3. 规划服务架构
+4. 制定认证和安全措施
 
-Output in Markdown with:
-- **Database Schema**: Tables with columns, types, and relationships (use code blocks)
-- **API Design**: RESTful or GraphQL endpoints with request/response examples
-- **Architecture**: Service boundaries, data flow, caching strategy
-- **Security**: Auth flow, input validation, rate limiting
+请用 Markdown 格式输出：
+- **数据库 Schema**：表结构，包含列名、类型和关系（使用代码块）
+- **API 设计**：RESTful 或 GraphQL 端点，附请求/响应示例
+- **架构设计**：服务边界、数据流、缓存策略
+- **安全方案**：认证流程、输入校验、限流
 
-Use code blocks for schemas and API examples. Be implementation-ready.`,
+使用代码块展示 Schema 和 API 示例。确保可直接用于实现。请全程使用中文回复。`,
 
-  frontend: `You are the **Frontend Developer** — the client-side engineering agent in the PRISM team.
+  frontend: `你是**前端开发者** —— PRISM 团队的客户端工程智能体。
 
-Based on the UX design and backend API, your job is to:
-1. Define the component architecture
-2. Plan state management strategy
-3. Specify key component implementations
-4. Detail responsive design approach
+基于 UX 设计和后端 API，你的职责是：
+1. 定义组件架构
+2. 规划状态管理策略
+3. 详细说明关键组件的实现
+4. 制定响应式设计方案
 
-Output in Markdown with:
-- **Component Tree**: Hierarchical component structure
-- **State Management**: Global vs local state, data fetching strategy
-- **Key Components**: 2-3 core component specifications with props
-- **Responsive Strategy**: Breakpoints and mobile-first approach
+请用 Markdown 格式输出：
+- **组件树**：层级化的组件结构
+- **状态管理**：全局 vs 局部状态、数据获取策略
+- **关键组件**：2-3 个核心组件的规格说明及 Props
+- **响应式策略**：断点和移动优先方案
 
-Include code snippets for key components. Focus on React/TypeScript patterns.`,
+包含关键组件的代码片段。聚焦于 React/TypeScript 模式。请全程使用中文回复。`,
 
-  devops: `You are the **DevOps Engineer** — the infrastructure and deployment agent in the PRISM team.
+  devops: `你是**DevOps 工程师** —— PRISM 团队的基础设施和部署智能体。
 
-Based on the architecture decisions, your job is to:
-1. Design the CI/CD pipeline
-2. Plan the deployment architecture
-3. Set up monitoring and alerting
-4. Define environment configuration
+基于架构决策，你的职责是：
+1. 设计 CI/CD 流水线
+2. 规划部署架构
+3. 搭建监控和告警
+4. 定义环境配置
 
-Output in Markdown with:
-- **CI/CD Pipeline**: Build, test, deploy stages
-- **Infrastructure**: Hosting, CDN, database hosting recommendations
-- **Monitoring**: Key metrics, alerting thresholds, logging strategy
-- **Environment Config**: Environment variables, secrets management
+请用 Markdown 格式输出：
+- **CI/CD 流水线**：构建、测试、部署各阶段
+- **基础设施**：托管、CDN、数据库托管建议
+- **监控方案**：关键指标、告警阈值、日志策略
+- **环境配置**：环境变量、密钥管理
 
-Be specific about tools and configurations. Include pipeline YAML snippets where helpful.`,
+请具体说明工具和配置。在有帮助的地方包含流水线 YAML 片段。请全程使用中文回复。`,
 
-  critic: `You are the **Quality Critic** — the code review and quality assurance agent in the PRISM team.
+  critic: `你是**质量评审员** —— PRISM 团队的代码审查和质量保证智能体。
 
-Review ALL previous agents' outputs and your job is to:
-1. Identify potential issues, gaps, or inconsistencies
-2. Suggest improvements and optimizations
-3. Check for security vulnerabilities
-4. Verify completeness against original requirements
+审查所有前序智能体的输出，你的职责是：
+1. 识别潜在的问题、缺口或不一致
+2. 提出改进和优化建议
+3. 检查安全漏洞
+4. 验证是否完整覆盖了原始需求
 
-Output in Markdown with:
-- **Issues Found**: Numbered list of problems with severity (Critical/High/Medium/Low)
-- **Improvement Suggestions**: Specific, actionable recommendations
-- **Security Review**: Potential vulnerabilities and fixes
-- **Completeness Check**: Requirements coverage assessment
+请用 Markdown 格式输出：
+- **发现的问题**：编号列表，标注严重程度（严重 / 高 / 中 / 低）
+- **改进建议**：具体、可执行的建议
+- **安全审查**：潜在漏洞及修复方案
+- **完整性检查**：需求覆盖度评估
 
-Be constructive but thorough. Every issue should have a suggested fix.`,
+请建设性但彻底地审查。每个问题都应附带建议的修复方案。请全程使用中文回复。`,
 
-  growth: `You are the **Growth Hacker** — the launch and growth strategy agent in the PRISM team.
+  growth: `你是**增长黑客** —— PRISM 团队的发布和增长策略智能体。
 
-Based on the complete project plan, your job is to:
-1. Define the go-to-market strategy
-2. Plan user acquisition channels
-3. Set up analytics and tracking
-4. Design onboarding and retention flows
+基于完整的项目方案，你的职责是：
+1. 定义上市策略
+2. 规划用户获取渠道
+3. 搭建分析和追踪
+4. 设计引导和留存流程
 
-Output in Markdown with:
-- **Launch Plan**: Pre-launch, launch day, post-launch activities
-- **Acquisition Channels**: Top 3 channels with tactics and estimated costs
-- **Analytics Setup**: Key events to track, funnel definitions
-- **Retention Strategy**: Onboarding flow, engagement hooks, re-engagement tactics
+请用 Markdown 格式输出：
+- **发布计划**：发布前、发布当天、发布后的活动
+- **获客渠道**：前 3 个渠道，附策略和预估成本
+- **分析体系**：需要追踪的关键事件、漏斗定义
+- **留存策略**：引导流程、参与钩子、召回策略
 
-Focus on actionable, low-cost growth tactics suitable for startups.`,
+聚焦于适合初创企业的可执行、低成本增长策略。请全程使用中文回复。`,
 };
 
-// ─── Pipeline Phases ─────────────────────────────────────────────────
+// ─── 流水线阶段 ─────────────────────────────────────────────────
 const PIPELINE_PHASES = [
   { phase: 0, name: "Discover",  agents: ["conductor", "researcher"] },
   { phase: 1, name: "Strategy",  agents: ["pm", "ux"] },
@@ -175,7 +175,7 @@ const PIPELINE_PHASES = [
   { phase: 5, name: "Launch",    agents: ["growth"] },
 ];
 
-// ─── LLM Call Helper ─────────────────────────────────────────────────
+// ─── LLM 调用辅助函数 ─────────────────────────────────────────────────
 async function callAgent(
   agentRole: string,
   userPrompt: string,
@@ -184,19 +184,19 @@ async function callAgent(
 ): Promise<string> {
   const systemPrompt = AGENT_PROMPTS[agentRole];
   if (!systemPrompt) {
-    throw new Error(`No prompt defined for agent role: ${agentRole}`);
+    throw new Error(`未找到智能体角色的提示词: ${agentRole}`);
   }
 
   const messages: Array<{ role: "system" | "user"; content: string }> = [
     { role: "system", content: systemPrompt },
   ];
 
-  // Build the user message with context from previous agents
-  let userMessage = `## User's Task\n${userPrompt}`;
+  // 构建包含前序智能体上下文的用户消息
+  let userMessage = `## 用户的任务\n${userPrompt}`;
   if (previousContext.trim()) {
-    userMessage += `\n\n## Context from Previous Agents\n${previousContext}`;
+    userMessage += `\n\n## 前序智能体的上下文\n${previousContext}`;
   }
-  userMessage += `\n\nPlease provide your analysis and deliverables based on the above. Be concise but thorough. Respond in the same language as the user's task description. If a Requirements Brief is provided in the context, treat it as the authoritative source of truth for project requirements.`;
+  userMessage += `\n\n请基于以上内容提供你的分析和交付物。保持简洁但全面。请全程使用中文回复。如果上下文中提供了需求简报，请将其作为项目需求的权威来源。`;
 
   messages.push({ role: "user", content: userMessage });
 
@@ -212,34 +212,33 @@ async function callAgent(
           .map(c => c.text)
           .join("\n");
       }
-      return "Agent completed analysis but produced no text output.";
+      return "智能体已完成分析，但未产生文本输出。";
     } catch (error) {
-      console.error(`[AgentSimulator] LLM call failed for ${agentRole} (attempt ${attempt}/${MAX_RETRIES}):`, error);
+      console.error(`[AgentSimulator] ${agentRole} 的 LLM 调用失败 (第 ${attempt}/${MAX_RETRIES} 次):`, error);
       if (attempt < MAX_RETRIES) {
-        // Exponential backoff: 2s, 4s
         const delay = Math.pow(2, attempt) * 1000;
-        console.log(`[AgentSimulator] Retrying ${agentRole} in ${delay}ms...`);
+        console.log(`[AgentSimulator] ${delay}ms 后重试 ${agentRole}...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
-        return `[Error] Agent ${agentRole} encountered an issue after ${MAX_RETRIES} attempts. Falling back to summary mode.\n\nThe ${agentRole} agent was unable to complete its analysis due to a temporary service issue. The pipeline will continue with available context.`;
+        return `[错误] 智能体 ${agentRole} 在 ${MAX_RETRIES} 次尝试后遇到问题。回退到摘要模式。\n\n${agentRole} 智能体由于临时服务问题无法完成分析。流水线将继续使用已有上下文。`;
       }
     }
   }
-  return "Agent completed but produced no output.";
+  return "智能体已完成但未产生输出。";
 }
 
-// ─── Main Pipeline Executor ──────────────────────────────────────────
+// ─── 主流水线执行器 ──────────────────────────────────────────
 export async function simulateAgentPipeline(taskId: number, prompt: string, requirementsBrief?: string, modelId?: string) {
-  // Accumulates outputs from all agents for context passing
+  // 累积所有智能体的输出，用于上下文传递
   const agentOutputs: Record<string, string> = {};
 
-  // If we have a requirements brief from the meeting, inject it as pre-existing context
+  // 如果有来自会议的需求简报，注入为预置上下文
   if (requirementsBrief) {
     agentOutputs["requirements_brief"] = requirementsBrief;
   }
 
   try {
-    // Mark task as running
+    // 标记任务为运行中
     await updateTask(taskId, {
       status: "running",
       startedAt: new Date(),
@@ -247,14 +246,14 @@ export async function simulateAgentPipeline(taskId: number, prompt: string, requ
     });
 
     for (const phase of PIPELINE_PHASES) {
-      // Update task phase
+      // 更新任务阶段
       await updateTask(taskId, { currentPhase: phase.phase });
 
       for (const agentRole of phase.agents) {
         const agent = AGENTS.find(a => a.role === agentRole)!;
         const actionLabel = getActionLabel(agentRole, phase.phase);
 
-        // Log "thinking" state
+        // 记录"思考中"状态
         await createAgentLog({
           taskId,
           agentName: agent.name,
@@ -265,32 +264,32 @@ export async function simulateAgentPipeline(taskId: number, prompt: string, requ
           status: "thinking",
         });
 
-        // Build context from previous agents' outputs
+        // 构建前序智能体输出的上下文
         const previousContext = buildContext(agentOutputs, agentRole);
 
-        // Log "working" state
+        // 记录"工作中"状态
         await createAgentLog({
           taskId,
           agentName: agent.name,
           agentRole: agent.role,
           phase: phase.phase,
           action: actionLabel,
-          content: "Analyzing and generating deliverables with AI...",
+          content: "正在使用 AI 分析并生成交付物...",
           status: "working",
         });
 
-        // Call LLM for real agent output
+        // 调用 LLM 获取真实智能体输出
         const startTime = Date.now();
         const output = await callAgent(agentRole, prompt, previousContext, modelId);
         const durationMs = Date.now() - startTime;
 
-        // Store output for context chain
+        // 存储输出用于上下文链
         const outputKey = phase.phase === 3 && agentRole !== "devops"
-          ? `${agentRole}_build`  // Phase 3 reuses backend/frontend, use unique keys
+          ? `${agentRole}_build`  // 第 3 阶段复用 backend/frontend，使用唯一键
           : agentRole;
         agentOutputs[outputKey] = output;
 
-        // Log "done" state with LLM-generated content
+        // 记录"完成"状态及 LLM 生成的内容
         await createAgentLog({
           taskId,
           agentName: agent.name,
@@ -304,10 +303,10 @@ export async function simulateAgentPipeline(taskId: number, prompt: string, requ
       }
     }
 
-    // Build final result summary
+    // 构建最终结果摘要
     const resultSummary = buildResultSummary(prompt, agentOutputs);
 
-    // Mark task as completed
+    // 标记任务为已完成
     await updateTask(taskId, {
       status: "completed",
       currentPhase: 5,
@@ -315,7 +314,7 @@ export async function simulateAgentPipeline(taskId: number, prompt: string, requ
       result: resultSummary,
     });
   } catch (error) {
-    console.error("[AgentSimulator] Pipeline error:", error);
+    console.error("[AgentSimulator] 流水线错误:", error);
     await updateTask(taskId, {
       status: "failed",
       completedAt: new Date(),
@@ -324,35 +323,35 @@ export async function simulateAgentPipeline(taskId: number, prompt: string, requ
   }
 }
 
-// ─── Helper: Action Labels ──────────────────────────────────────────
+// ─── 辅助函数：操作标签 ──────────────────────────────────────────
 function getActionLabel(role: string, phase: number): string {
   const labels: Record<string, Record<number, string>> = {
-    conductor: { 0: "Analyzing & decomposing task" },
-    researcher: { 0: "Researching technologies & market" },
-    pm:       { 1: "Defining requirements & user stories" },
-    ux:       { 1: "Designing user experience & flows" },
-    backend:  { 2: "Designing system architecture", 3: "Implementing core services", 4: "Optimizing performance" },
-    frontend: { 2: "Planning component architecture", 3: "Building UI implementation" },
-    devops:   { 3: "Configuring infrastructure & CI/CD" },
-    critic:   { 4: "Reviewing quality & security" },
-    growth:   { 5: "Planning launch & growth strategy" },
+    conductor: { 0: "分析与拆解任务" },
+    researcher: { 0: "调研技术与市场" },
+    pm:       { 1: "定义需求与用户故事" },
+    ux:       { 1: "设计用户体验与流程" },
+    backend:  { 2: "设计系统架构", 3: "实现核心服务", 4: "优化性能" },
+    frontend: { 2: "规划组件架构", 3: "构建 UI 实现" },
+    devops:   { 3: "配置基础设施与 CI/CD" },
+    critic:   { 4: "审查质量与安全" },
+    growth:   { 5: "规划发布与增长策略" },
   };
-  return labels[role]?.[phase] ?? "Processing";
+  return labels[role]?.[phase] ?? "处理中";
 }
 
-// ─── Helper: Build Context for Agent ─────────────────────────────────
+// ─── 辅助函数：构建智能体上下文 ─────────────────────────────────
 function buildContext(outputs: Record<string, string>, currentRole: string): string {
-  // Define what context each agent receives
+  // 定义每个智能体接收的上下文
   const contextMap: Record<string, string[]> = {
-    conductor: ["requirements_brief"],                     // Sees requirements brief if available
-    researcher: ["conductor", "requirements_brief"],       // Sees task breakdown + brief
-    pm:       ["conductor", "researcher", "requirements_brief"], // Sees breakdown + research + brief
-    ux:       ["pm", "requirements_brief"],                 // Sees requirements + brief
-    backend:  ["researcher", "pm", "ux", "requirements_brief"], // Sees research + requirements + UX + brief
-    frontend: ["ux", "backend", "requirements_brief"],     // Sees UX + backend API + brief
-    devops:   ["backend", "backend_build"],                // Sees architecture
-    critic:   ["conductor", "pm", "backend", "frontend", "backend_build", "frontend_build"], // Sees everything
-    growth:   ["pm", "critic"],                           // Sees requirements + quality review
+    conductor: ["requirements_brief"],
+    researcher: ["conductor", "requirements_brief"],
+    pm:       ["conductor", "researcher", "requirements_brief"],
+    ux:       ["pm", "requirements_brief"],
+    backend:  ["researcher", "pm", "ux", "requirements_brief"],
+    frontend: ["ux", "backend", "requirements_brief"],
+    devops:   ["backend", "backend_build"],
+    critic:   ["conductor", "pm", "backend", "frontend", "backend_build", "frontend_build"],
+    growth:   ["pm", "critic"],
   };
 
   const relevantKeys = contextMap[currentRole] ?? [];
@@ -361,20 +360,20 @@ function buildContext(outputs: Record<string, string>, currentRole: string): str
   for (const key of relevantKeys) {
     if (outputs[key]) {
       const agentName = AGENTS.find(a => a.role === key)?.name ?? key;
-      contextParts.push(`### ${agentName}'s Output\n${outputs[key]}`);
+      contextParts.push(`### ${agentName} 的输出\n${outputs[key]}`);
     }
   }
 
   return contextParts.join("\n\n---\n\n");
 }
 
-// ─── Helper: Build Final Result ──────────────────────────────────────
+// ─── 辅助函数：构建最终结果 ──────────────────────────────────────
 function buildResultSummary(
   prompt: string,
   outputs: Record<string, string>,
 ): Record<string, unknown> {
   return {
-    summary: `Task "${prompt}" completed successfully through 6 pipeline phases with ${AGENTS.length} specialized AI agents.`,
+    summary: `任务「${prompt}」已通过 6 个流水线阶段、${AGENTS.length} 个专业 AI 智能体成功完成。`,
     phases: PIPELINE_PHASES.map(p => p.name),
     agentsUsed: AGENTS.length,
     deliverables: Object.entries(outputs).map(([role, content]) => ({

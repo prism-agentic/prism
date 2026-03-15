@@ -1,149 +1,149 @@
 /**
- * PRISM Requirement Meeting Engine
+ * PRISM 需求会议引擎
  * 
- * Structured meeting with intelligent routing:
- *   Round 1 (fixed): Conductor → Researcher → PM (sequential analysis)
- *   Round 2+ (smart): Conductor routes user reply → dispatch to best-fit agent
- *   End: PM assembles Requirements Brief from all meeting context
+ * 结构化会议与智能路由：
+ *   第 1 轮（固定）：指挥官 → 调研员 → 产品经理（顺序分析）
+ *   第 2+ 轮（智能）：指挥官路由用户回复 → 分派给最合适的智能体
+ *   结束：产品经理汇总所有会议上下文生成需求简报
  */
 import { invokeLLM } from "./_core/llm";
 import { createMeetingMessage, updateTask, getTaskMeetingMessages } from "./db";
 
-// ─── Meeting Agent Prompts ──────────────────────────────────────────
+// ─── 会议智能体提示词 ──────────────────────────────────────────
 
 const MEETING_PROMPTS = {
-  /** Conductor: initial task analysis + complexity assessment */
-  conductor_round1: `You are the **Conductor** in a requirement meeting for the PRISM multi-agent framework.
+  /** 指挥官：初始任务分析 + 复杂度评估 */
+  conductor_round1: `你是 PRISM 多智能体框架需求会议中的**指挥官**。
 
-The user has submitted a new task. Your job in this meeting is to:
-1. Analyze the task description and identify key dimensions (scope, complexity, domain)
-2. Break down what information is still missing or ambiguous
-3. Identify the core problem the user is trying to solve
-4. Assess whether this needs deep clarification or is straightforward
+用户提交了一个新任务。你在本次会议中的职责是：
+1. 分析任务描述，识别关键维度（范围、复杂度、领域）
+2. 梳理哪些信息仍然缺失或模糊
+3. 识别用户试图解决的核心问题
+4. 评估这是否需要深入澄清，还是比较直接明了
 
-Output in Markdown:
-- **Task Understanding**: Your interpretation of what the user wants (2-3 sentences)
-- **Key Dimensions**: List the main aspects (target users, core features, technical constraints, timeline)
-- **Information Gaps**: What's unclear or missing that we need to clarify
-- **Complexity Assessment**: Simple / Moderate / Complex — with brief justification
+请用 Markdown 格式输出：
+- **任务理解**：你对用户需求的解读（2-3 句话）
+- **关键维度**：列出主要方面（目标用户、核心功能、技术约束、时间线）
+- **信息缺口**：哪些内容不清楚或缺失，需要进一步澄清
+- **复杂度评估**：简单 / 中等 / 复杂 —— 附简要理由
 
-Keep it concise and actionable. Respond in the same language as the user's task.`,
+保持简洁且可执行。请全程使用中文回复。`,
 
-  /** Researcher: competitive landscape + market intelligence */
-  researcher_round1: `You are the **Researcher** in a requirement meeting for the PRISM multi-agent framework.
+  /** 调研员：竞品分析 + 市场情报 */
+  researcher_round1: `你是 PRISM 多智能体框架需求会议中的**调研员**。
 
-Based on the Conductor's analysis, your job is to:
-1. Identify the top 2-3 existing products/solutions that address the user's need (Follow the Best)
-2. Analyze their core features, strengths, and differentiators
-3. Note what technology stacks they use (if relevant)
-4. Highlight opportunities for differentiation
+基于指挥官的分析，你的职责是：
+1. 识别 2-3 个最相关的现有产品/解决方案（Follow the Best 策略）
+2. 分析它们的核心功能、优势和差异化特点
+3. 记录它们使用的技术栈（如相关）
+4. 找出差异化机会
 
-Output in Markdown:
-- **Market Landscape**: Brief overview of the space
-- **Top Competitors**: For each (2-3 products):
-  - Name and brief description
-  - Core solution / key features
-  - Strengths and weaknesses
-  - Technology approach (if known)
-- **Differentiation Opportunities**: What gaps exist that the user could exploit
-- **Recommendation**: Which product to study most closely and why
+请用 Markdown 格式输出：
+- **市场格局**：该领域的简要概述
+- **主要竞品**：针对每个产品（2-3 个）：
+  - 名称和简要描述
+  - 核心解决方案 / 关键功能
+  - 优势和劣势
+  - 技术方案（如已知）
+- **差异化机会**：存在哪些用户可以利用的空白
+- **建议**：最值得研究的产品及原因
 
-Be specific — name real products, real features, real numbers where possible. Respond in the same language as the user's task.`,
+请尽量具体——使用真实的产品名称、真实的功能、真实的数据。请全程使用中文回复。`,
 
-  /** PM: structured clarification questions informed by research */
-  pm_round1: `You are the **Product Manager** in a requirement meeting for the PRISM multi-agent framework.
+  /** 产品经理：基于调研的结构化澄清问题 */
+  pm_round1: `你是 PRISM 多智能体框架需求会议中的**产品经理**。
 
-Based on the Conductor's analysis and Researcher's competitive intelligence, your job is to:
-1. Synthesize the findings into clear, structured clarification questions
-2. Each question should reference the competitive research where relevant
-3. Questions should help narrow down the MVP scope
+基于指挥官的分析和调研员的竞品情报，你的职责是：
+1. 将发现综合为清晰、结构化的澄清问题
+2. 每个问题应在相关处引用竞品调研
+3. 问题应有助于缩小 MVP 范围
 
-Generate exactly 3-5 clarification questions. For each question:
-- Make it specific and actionable (not vague like "what do you want?")
-- Reference competitor products as options where applicable (e.g., "Do you prefer Linear's minimal kanban approach or Jira's full project management suite?")
-- Cover different dimensions: target users, core features, technical preferences, scope/timeline
+请生成 3-5 个澄清问题。每个问题需要：
+- 具体且可执行（不要模糊的"你想要什么？"）
+- 在适当的地方引用竞品作为选项（例如："你更倾向于像 Linear 那样的极简看板，还是像 Jira 那样的全功能项目管理套件？"）
+- 覆盖不同维度：目标用户、核心功能、技术偏好、范围/时间线
 
-Output in Markdown:
-- **Questions for You**: Numbered list of 3-5 questions
-  - Each question should be 1-2 sentences
-  - Include context/options from the competitive research to help the user decide
+请用 Markdown 格式输出：
+- **需要你回答的问题**：编号列表，3-5 个问题
+  - 每个问题 1-2 句话
+  - 包含来自竞品调研的上下文/选项，帮助用户做决定
 
-End with a brief note: "Feel free to answer any or all questions. You can also skip and let us proceed with our best judgment."
+最后附一句话："你可以选择回答部分或全部问题，也可以跳过，让我们按最佳判断继续推进。"
 
-Respond in the same language as the user's task.`,
+请全程使用中文回复。`,
 
-  /** Conductor: classify user reply and decide which agent should respond */
-  conductor_router: `You are the **Conductor** acting as an intelligent router in a requirement meeting.
+  /** 指挥官：分类用户回复并决定哪个智能体应该响应 */
+  conductor_router: `你是需求会议中担任**智能路由器**角色的**指挥官**。
 
-The user has replied to the meeting discussion. Analyze their reply and determine which agent(s) should respond:
+用户已回复了会议讨论。分析他们的回复，决定哪个智能体应该响应：
 
-- **conductor**: If the user asks about project scope, feasibility, timeline, team size, or overall approach
-- **researcher**: If the user asks about technology choices, market comparisons, competitor features, or wants more research
-- **pm**: If the user discusses features, priorities, user stories, MVP scope, or business requirements
+- **conductor**：如果用户询问项目范围、可行性、时间线、团队规模或整体方案
+- **researcher**：如果用户询问技术选型、市场对比、竞品功能，或需要更多调研
+- **pm**：如果用户讨论功能、优先级、用户故事、MVP 范围或业务需求
 
-You MUST respond with ONLY a valid JSON object (no markdown, no explanation):
+你**必须**只返回一个有效的 JSON 对象（不要 markdown，不要解释）：
 {
   "respondents": ["agent_role_1", "agent_role_2"],
-  "reasoning": "Brief explanation of why these agents should respond",
+  "reasoning": "简要说明为什么这些智能体应该响应",
   "isResolved": false
 }
 
-Rules:
-- "respondents" must contain 1-2 agent roles from: "conductor", "researcher", "pm"
-- Set "isResolved" to true ONLY if the user explicitly says they're done or satisfied
-- Usually 1 agent is enough; use 2 only if the reply clearly spans two domains
-- If unclear, default to ["pm"] as they handle most product discussions`,
+规则：
+- "respondents" 必须包含 1-2 个智能体角色，来自："conductor"、"researcher"、"pm"
+- 仅当用户明确表示已完成或满意时，才将 "isResolved" 设为 true
+- 通常 1 个智能体就够了；仅当回复明确跨越两个领域时才用 2 个
+- 如果不确定，默认使用 ["pm"]，因为产品经理处理大多数产品讨论`,
 
-  /** Follow-up prompts for each agent in Round 2+ */
-  conductor_followup: `You are the **Conductor** responding to the user in a requirement meeting.
+  /** 第 2+ 轮各智能体的跟进提示词 */
+  conductor_followup: `你是需求会议中回复用户的**指挥官**。
 
-Based on the meeting context and the user's latest reply, provide a helpful response about project scope, feasibility, or approach. Be concise (3-5 sentences). Reference previous discussion points. Respond in the same language as the user's task.`,
+基于会议上下文和用户的最新回复，提供关于项目范围、可行性或方案的有价值回应。保持简洁（3-5 句话）。引用之前的讨论要点。请全程使用中文回复。`,
 
-  researcher_followup: `You are the **Researcher** responding to the user in a requirement meeting.
+  researcher_followup: `你是需求会议中回复用户的**调研员**。
 
-Based on the meeting context and the user's latest reply, provide additional research insights, technology comparisons, or competitive intelligence. Be specific with product names and features. Be concise (3-5 sentences). Respond in the same language as the user's task.`,
+基于会议上下文和用户的最新回复，提供额外的调研洞察、技术对比或竞品情报。请使用具体的产品名称和功能。保持简洁（3-5 句话）。请全程使用中文回复。`,
 
-  pm_followup: `You are the **Product Manager** responding to the user in a requirement meeting.
+  pm_followup: `你是需求会议中回复用户的**产品经理**。
 
-Based on the meeting context and the user's latest reply, help clarify requirements, refine feature priorities, or narrow down the MVP scope. If the user has answered questions, acknowledge and build on their answers. May ask 1-2 follow-up questions if needed. Be concise. Respond in the same language as the user's task.`,
+基于会议上下文和用户的最新回复，帮助澄清需求、细化功能优先级或缩小 MVP 范围。如果用户已回答了问题，请确认并在此基础上深入。如有需要可追问 1-2 个跟进问题。保持简洁。请全程使用中文回复。`,
 
-  /** PM: generate the final Requirements Brief */
-  pm_brief: `You are the **Product Manager** concluding a requirement meeting for the PRISM multi-agent framework.
+  /** 产品经理：生成最终需求简报 */
+  pm_brief: `你是 PRISM 多智能体框架需求会议的**产品经理**，正在总结会议。
 
-Based on ALL the meeting discussion (Conductor's analysis, Researcher's competitive intelligence, your questions, and the user's answers), generate a comprehensive **Requirements Brief** that will guide all downstream agents.
+基于所有会议讨论（指挥官的分析、调研员的竞品情报、你的问题以及用户的回答），生成一份全面的**需求简报**，用于指导所有下游智能体。
 
-Output a structured Requirements Brief in Markdown:
+请用 Markdown 格式输出结构化的需求简报：
 
-# Requirements Brief
+# 需求简报
 
-## Project Overview
-(2-3 sentence summary of what we're building and why)
+## 项目概述
+（2-3 句话总结我们要构建什么以及为什么）
 
-## Target Users
-(Who is this for? Primary and secondary personas)
+## 目标用户
+（这是为谁做的？主要和次要用户画像）
 
-## Competitive Reference
-(Which products we're learning from and what to adopt/avoid — based on Researcher's findings)
+## 竞品参考
+（我们从哪些产品学习，应该采纳/避免什么——基于调研员的发现）
 
-## Core Features (MVP)
-(Numbered list of must-have features with brief descriptions)
+## 核心功能（MVP）
+（编号列表，列出必须实现的功能及简要描述）
 
-## Nice-to-Have Features
-(Features for post-MVP)
+## 锦上添花功能
+（MVP 之后的功能）
 
-## Technical Preferences
-(Any stated preferences for tech stack, architecture, or constraints)
+## 技术偏好
+（用户明确的技术栈、架构或约束偏好）
 
-## Success Criteria
-(How do we know this is done well? 2-3 measurable criteria)
+## 成功标准
+（如何判断做得好？2-3 个可衡量的标准）
 
-## Key Decisions Made
-(Important decisions from the meeting discussion)
+## 关键决策
+（会议讨论中做出的重要决策）
 
-Be specific and actionable. This document will be the single source of truth for all agents. Respond in the same language as the user's task.`,
+请具体且可执行。这份文档将成为所有智能体的唯一权威需求来源。请全程使用中文回复。`,
 };
 
-// ─── LLM Helper ─────────────────────────────────────────────────────
+// ─── LLM 调用辅助函数 ─────────────────────────────────────────────────────
 
 async function callMeetingAgent(
   systemPrompt: string,
@@ -169,30 +169,30 @@ async function callMeetingAgent(
           .map(c => c.text)
           .join("\n");
       }
-      return "Agent completed but produced no text output.";
+      return "智能体已完成分析，但未产生文本输出。";
     } catch (error) {
-      console.error(`[Meeting] LLM call failed (attempt ${attempt}/${MAX_RETRIES}):`, error);
+      console.error(`[Meeting] LLM 调用失败 (第 ${attempt}/${MAX_RETRIES} 次):`, error);
       if (attempt < MAX_RETRIES) {
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
       } else {
-        return `[Meeting agent encountered a temporary issue. The meeting will continue with available context.]`;
+        return `[会议智能体遇到临时问题。会议将继续使用已有上下文。]`;
       }
     }
   }
-  return "Agent completed but produced no output.";
+  return "智能体已完成但未产生输出。";
 }
 
-// ─── Round 1: Fixed Analysis Chain ──────────────────────────────────
+// ─── 第 1 轮：固定分析链 ──────────────────────────────────────
 
 export async function runMeetingRound1(taskId: number, prompt: string, modelId?: string) {
   try {
-    // Mark task as clarifying
+    // 标记任务为澄清中
     await updateTask(taskId, { status: "clarifying", meetingRound: 1 });
 
-    // Step 1: Conductor analyzes
+    // 步骤 1：指挥官分析
     const conductorOutput = await callMeetingAgent(
       MEETING_PROMPTS.conductor_round1,
-      `## User's Task\n${prompt}`,
+      `## 用户的任务\n${prompt}`,
       modelId,
     );
     await createMeetingMessage({
@@ -203,10 +203,10 @@ export async function runMeetingRound1(taskId: number, prompt: string, modelId?:
       messageType: "analysis",
     });
 
-    // Step 2: Researcher does competitive research
+    // 步骤 2：调研员进行竞品调研
     const researcherOutput = await callMeetingAgent(
       MEETING_PROMPTS.researcher_round1,
-      `## User's Task\n${prompt}\n\n## Conductor's Analysis\n${conductorOutput}`,
+      `## 用户的任务\n${prompt}\n\n## 指挥官的分析\n${conductorOutput}`,
       modelId,
     );
     await createMeetingMessage({
@@ -217,10 +217,10 @@ export async function runMeetingRound1(taskId: number, prompt: string, modelId?:
       messageType: "research",
     });
 
-    // Step 3: PM generates structured questions
+    // 步骤 3：产品经理生成结构化问题
     const pmOutput = await callMeetingAgent(
       MEETING_PROMPTS.pm_round1,
-      `## User's Task\n${prompt}\n\n## Conductor's Analysis\n${conductorOutput}\n\n## Researcher's Competitive Intelligence\n${researcherOutput}`,
+      `## 用户的任务\n${prompt}\n\n## 指挥官的分析\n${conductorOutput}\n\n## 调研员的竞品情报\n${researcherOutput}`,
       modelId,
     );
     await createMeetingMessage({
@@ -231,24 +231,24 @@ export async function runMeetingRound1(taskId: number, prompt: string, modelId?:
       messageType: "questions",
     });
 
-    console.log(`[Meeting] Round 1 complete for task ${taskId}. Waiting for user reply.`);
+    console.log(`[Meeting] 任务 ${taskId} 第 1 轮完成。等待用户回复。`);
   } catch (error) {
-    console.error(`[Meeting] Round 1 error for task ${taskId}:`, error);
-    // Don't fail the task — let user still proceed
+    console.error(`[Meeting] 任务 ${taskId} 第 1 轮出错:`, error);
+    // 不让任务失败——让用户仍可继续
     await createMeetingMessage({
       taskId,
       sender: "conductor",
       round: 1,
-      content: "The meeting encountered a temporary issue. You can still proceed by clicking 'Start Execution' or try replying to continue the discussion.",
+      content: "会议遇到临时问题。你仍然可以点击「结束会议」继续，或尝试回复以继续讨论。",
       messageType: "error",
     });
   }
 }
 
-// ─── Round 2+: Intelligent Routing ──────────────────────────────────
+// ─── 第 2+ 轮：智能路由 ──────────────────────────────────────
 
 export async function handleUserReply(taskId: number, prompt: string, userReply: string, modelId?: string) {
-  // Save user message
+  // 保存用户消息
   const messages = await getTaskMeetingMessages(taskId);
   const currentRound = Math.max(...messages.map(m => m.round), 0) + 1;
 
@@ -260,20 +260,20 @@ export async function handleUserReply(taskId: number, prompt: string, userReply:
     messageType: "reply",
   });
 
-  // Build meeting context for the router
+  // 构建会议上下文供路由器使用
   const meetingContext = messages
-    .map(m => `[${m.sender.toUpperCase()}] (Round ${m.round}): ${m.content}`)
+    .map(m => `[${m.sender.toUpperCase()}] (第 ${m.round} 轮): ${m.content}`)
     .join("\n\n---\n\n");
 
-  // Step 1: Conductor routes the reply
-  const routerInput = `## Original Task\n${prompt}\n\n## Meeting History\n${meetingContext}\n\n## User's Latest Reply\n${userReply}`;
+  // 步骤 1：指挥官路由回复
+  const routerInput = `## 原始任务\n${prompt}\n\n## 会议历史\n${meetingContext}\n\n## 用户最新回复\n${userReply}`;
   const routerOutput = await callMeetingAgent(MEETING_PROMPTS.conductor_router, routerInput, modelId);
 
   let respondents: string[] = ["pm"];
   let isResolved = false;
 
   try {
-    // Parse JSON from the router output (handle potential markdown wrapping)
+    // 解析路由器输出的 JSON（处理可能的 markdown 包裹）
     const jsonStr = routerOutput.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(jsonStr);
     if (Array.isArray(parsed.respondents)) {
@@ -284,23 +284,23 @@ export async function handleUserReply(taskId: number, prompt: string, userReply:
     }
     isResolved = !!parsed.isResolved;
   } catch {
-    console.warn("[Meeting] Failed to parse router output, defaulting to PM:", routerOutput);
+    console.warn("[Meeting] 解析路由器输出失败，默认使用产品经理:", routerOutput);
   }
 
   if (isResolved) {
-    // User is satisfied — generate brief and proceed
+    // 用户满意——生成简报并继续
     await generateRequirementsBrief(taskId, prompt);
     return { isResolved: true, respondents: [] };
   }
 
-  // Step 2: Dispatch to selected agents
+  // 步骤 2：分派给选定的智能体
   const followupPrompts: Record<string, string> = {
     conductor: MEETING_PROMPTS.conductor_followup,
     researcher: MEETING_PROMPTS.researcher_followup,
     pm: MEETING_PROMPTS.pm_followup,
   };
 
-  const fullContext = `## Original Task\n${prompt}\n\n## Meeting History\n${meetingContext}\n\n## User's Latest Reply\n${userReply}`;
+  const fullContext = `## 原始任务\n${prompt}\n\n## 会议历史\n${meetingContext}\n\n## 用户最新回复\n${userReply}`;
 
   for (const agent of respondents) {
     const agentPrompt = followupPrompts[agent];
@@ -316,28 +316,28 @@ export async function handleUserReply(taskId: number, prompt: string, userReply:
     });
   }
 
-  // Update meeting round
+  // 更新会议轮次
   await updateTask(taskId, { meetingRound: currentRound });
 
   return { isResolved: false, respondents };
 }
 
-// ─── Generate Requirements Brief ───────────────────────────────────
+// ─── 生成需求简报 ───────────────────────────────────────────
 
 export async function generateRequirementsBrief(taskId: number, prompt: string, modelId?: string) {
   const messages = await getTaskMeetingMessages(taskId);
 
   const meetingTranscript = messages
     .map(m => {
-      const label = m.sender === "user" ? "USER" : m.sender.toUpperCase();
-      return `[${label}] (Round ${m.round}): ${m.content}`;
+      const label = m.sender === "user" ? "用户" : m.sender.toUpperCase();
+      return `[${label}] (第 ${m.round} 轮): ${m.content}`;
     })
     .join("\n\n---\n\n");
 
-  const briefInput = `## Original Task\n${prompt}\n\n## Full Meeting Transcript\n${meetingTranscript}`;
+  const briefInput = `## 原始任务\n${prompt}\n\n## 完整会议记录\n${meetingTranscript}`;
   const brief = await callMeetingAgent(MEETING_PROMPTS.pm_brief, briefInput, modelId);
 
-  // Save the brief as a meeting message and in the task
+  // 保存简报为会议消息并存入任务
   await createMeetingMessage({
     taskId,
     sender: "pm",
@@ -350,6 +350,6 @@ export async function generateRequirementsBrief(taskId: number, prompt: string, 
     requirementsBrief: { brief, generatedAt: new Date().toISOString() },
   });
 
-  console.log(`[Meeting] Requirements Brief generated for task ${taskId}`);
+  console.log(`[Meeting] 任务 ${taskId} 的需求简报已生成`);
   return brief;
 }
