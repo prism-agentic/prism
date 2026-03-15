@@ -152,4 +152,8 @@
 - [x] Workspace 页面文案中文化（任务列表、会议 UI、需求确认、流水线、输入栏等）
 - [x] ModelSelector 组件文案中文化（模型选择、Tier 标签等）
 - [x] 其他共享组件中文化（NotFound、AgentMonitor、TaskResults等）
+- [x] 保存 checkpoint
+
+## UI 优化 — 新建项目弹窗一屏显示
+- [x] 优化弹窗布局，使内容在一屏内完整显示（模板卡片更紧凑、添加滚动区域）
 - [ ] 保存 checkpoint

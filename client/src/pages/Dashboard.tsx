@@ -177,78 +177,83 @@ export default function Dashboard() {
         {/* 创建项目弹窗 */}
         {showCreate && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
-            <div className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="p-6 border-b border-border">
+            <div className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-border flex-shrink-0">
                 <h3 className="text-lg font-display font-bold">创建新项目</h3>
-                <p className="text-sm text-muted-foreground mt-1">选择一个模板快速开始，或描述自定义任务</p>
+                <p className="text-sm text-muted-foreground mt-0.5">选择一个模板快速开始，或描述自定义任务</p>
               </div>
 
-              {/* 模板网格 */}
-              <div className="p-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {TEMPLATES.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      setSelectedTemplate(t.id);
-                      if (t.id !== "custom") setNewName(t.name);
-                    }}
-                    className={`p-4 rounded-xl border text-left transition-all ${
-                      selectedTemplate === t.id
-                        ? "border-prism-cyan bg-prism-cyan/10"
-                        : "border-border hover:border-prism-cyan/30"
-                    }`}
-                  >
-                    <span className="text-2xl">{t.icon}</span>
-                    <p className="text-sm font-semibold mt-2">{t.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.description}</p>
-                  </button>
-                ))}
+              {/* 可滚动内容区 */}
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {/* 模板网格 */}
+                <div className="px-5 py-3 grid grid-cols-3 gap-2">
+                  {TEMPLATES.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setSelectedTemplate(t.id);
+                        if (t.id !== "custom") setNewName(t.name);
+                      }}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        selectedTemplate === t.id
+                          ? "border-prism-cyan bg-prism-cyan/10"
+                          : "border-border hover:border-prism-cyan/30"
+                      }`}
+                    >
+                      <span className="text-lg">{t.icon}</span>
+                      <p className="text-xs font-semibold mt-1.5 leading-tight">{t.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{t.description}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* 表单 */}
+                <div className="px-5 pb-3 space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">项目名称</label>
+                    <input
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      placeholder="我的 PRISM 项目"
+                      className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">项目描述（可选）</label>
+                    <textarea
+                      value={newDesc}
+                      onChange={e => setNewDesc(e.target.value)}
+                      placeholder="描述你想要构建的产品..."
+                      rows={2}
+                      className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 resize-none text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* 表单 */}
-              <div className="p-6 border-t border-border space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">项目名称</label>
-                  <input
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    placeholder="我的 PRISM 项目"
-                    className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">项目描述（可选）</label>
-                  <textarea
-                    value={newDesc}
-                    onChange={e => setNewDesc(e.target.value)}
-                    placeholder="描述你想要构建的产品..."
-                    rows={3}
-                    className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 resize-none"
-                  />
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <button
-                    onClick={() => setShowCreate(false)}
-                    className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!newName.trim()) return;
-                      createMutation.mutate({
-                        name: newName.trim(),
-                        description: newDesc.trim() || undefined,
-                        template: selectedTemplate,
-                      });
-                    }}
-                    disabled={!newName.trim() || createMutation.isPending}
-                    className="flex items-center gap-2 px-5 py-2 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:bg-prism-cyan/90 transition-colors disabled:opacity-50"
-                  >
-                    {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    创建并开始
-                  </button>
-                </div>
+              {/* 固定底部操作栏 */}
+              <div className="px-5 py-3 border-t border-border flex gap-3 justify-end flex-shrink-0">
+                <button
+                  onClick={() => setShowCreate(false)}
+                  className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    if (!newName.trim()) return;
+                    createMutation.mutate({
+                      name: newName.trim(),
+                      description: newDesc.trim() || undefined,
+                      template: selectedTemplate,
+                    });
+                  }}
+                  disabled={!newName.trim() || createMutation.isPending}
+                  className="flex items-center gap-2 px-5 py-2 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:bg-prism-cyan/90 transition-colors disabled:opacity-50 text-sm"
+                >
+                  {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                  创建并开始
+                </button>
               </div>
             </div>
           </div>
