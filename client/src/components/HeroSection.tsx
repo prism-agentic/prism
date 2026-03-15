@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 import { useI18n } from "@/contexts/I18nContext";
 import { RichText } from "@/components/RichText";
+import AnimatedTerminal from "@/components/AnimatedTerminal";
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-hero-bg-ZapLqSCNvV2QuQ9Qbb2Wsk.webp";
 
@@ -78,39 +79,7 @@ export default function HeroSection() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
           >
-            <div className="glass-card rounded-xl p-1 glow-cyan">
-              {/* Terminal header */}
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/70" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/70" />
-                </div>
-                <span className="text-xs text-muted-foreground font-mono ml-2">prism-cli</span>
-              </div>
-              {/* Terminal body */}
-              <div className="p-4 font-mono text-sm leading-relaxed space-y-1">
-                <div className="text-muted-foreground">$ <span className="text-prism-cyan">prism</span> init my-saas-mvp</div>
-                <div className="text-muted-foreground/60 text-xs">Initializing PRISM project...</div>
-                <div className="text-green-400/80 text-xs">✓ Created prism.yaml</div>
-                <div className="text-green-400/80 text-xs">✓ Loaded 20 agents (7 divisions)</div>
-                <div className="text-green-400/80 text-xs">✓ Evolution library initialized</div>
-                <div className="mt-3 text-muted-foreground">$ <span className="text-prism-cyan">prism</span> agents</div>
-                <div className="text-xs text-muted-foreground/80 mt-1">
-                  <span className="text-prism-amber">ENGINEERING</span> backend-architect, frontend-developer
-                </div>
-                <div className="text-xs text-muted-foreground/80">
-                  <span className="text-prism-amber">DESIGN</span> ux-architect, ui-designer, brand-guardian
-                </div>
-                <div className="text-xs text-muted-foreground/80">
-                  <span className="text-prism-amber">SPECIALIZED</span> conductor, critic, planner
-                </div>
-                <div className="mt-3 text-muted-foreground">$ <span className="text-prism-cyan">prism</span> flow start</div>
-                <div className="text-xs text-muted-foreground/60">Pipeline pipe-a3f2 created (PRISM-Full)</div>
-                <div className="text-xs text-prism-cyan">→ Phase 0: Discover <span className="text-green-400/80">ACTIVE</span></div>
-                <div className="mt-1 animate-pulse text-prism-cyan">▌</div>
-              </div>
-            </div>
+            <AnimatedTerminal />
           </motion.div>
         </div>
       </div>

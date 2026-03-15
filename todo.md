@@ -175,4 +175,10 @@
 
 ## UI 优化 — 移除 Hero 版本徽章
 - [x] 删除 Hero 区域的 v0.2.0 版本徽章
-- [ ] 保存 checkpoint
+- [x] 保存 checkpoint
+
+## UI 优化 — Hero 动态终端效果
+- [x] 创建 AnimatedTerminal 组件（打字机效果 + 进度条动画 + 循环播放）
+- [x] 替换 HeroSection 中的静态终端
+- [x] 修复动画状态机逻辑（重写为更可靠的 currentLine 推进模式）
+- [x] 保存 checkpoint
