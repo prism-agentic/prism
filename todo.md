@@ -104,3 +104,18 @@
 - [x] 会议记录导出：前端会议结束后显示“导出 Markdown”按钮
 - [x] 编写/更新 vitest 测试（45 个测试全部通过）
 - [x] 保存 checkpoint
+
+## Bugfix — Data too long for content column
+- [ ] 修复 agent_logs.content 列为 longtext（支持超长 LLM 输出）
+- [ ] 重新运行任务验证 PM 输出完整写入
+
+## Phase 11 — 需求确认关卡（Requirement Confirmation Checkpoint）
+- [x] 数据库：tasks 表增加 'confirming' 状态
+- [x] 后端：拆分 confirmMeeting 为 endMeeting（生成需求简报）+ approveBrief（确认后执行）
+- [x] 后端：新增 task.updateBrief mutation 支持用户编辑需求简报
+- [x] 后端：新增 task.returnToMeeting mutation 支持返回继续讨论
+- [x] 前端：需求简报确认 UI（结构化卡片展示）
+- [x] 前端：Approve & Execute / Edit Brief / Return to Meeting 三个操作按钮
+- [x] 前端：需求简报编辑模式（可修改内容后确认）
+- [x] 编写/更新 vitest 测试（62 个测试全部通过）
+- [ ] 保存 checkpoint

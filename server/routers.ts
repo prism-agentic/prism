@@ -156,7 +156,6 @@ export const appRouter = router({
      * Create a new task.
      * skipMeeting = false (default): starts with requirement meeting (Conductor → Researcher → PM)
      * skipMeeting = true: skips meeting, goes directly to pipeline execution
-     * templateId: optional template ID to pre-fill prompt
      */
     create: protectedProcedure
       .input(z.object({
@@ -206,8 +205,119 @@ export const appRouter = router({
       }),
 
     /**
-     * User confirms the meeting is done.
-     * PM generates Requirements Brief, then pipeline execution begins.
+     * End the meeting and generate Requirements Brief.
+     * Status transitions: clarifying → confirming
+     * The brief is displayed to the user for review BEFORE pipeline execution.
+     */
+    endMeeting: protectedProcedure
+      .input(z.object({
+        taskId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        if (task.status !== "clarifying") throw new Error("Task is not in meeting phase");
+
+        // Generate requirements brief (PM synthesizes all meeting context)
+        const brief = await generateRequirementsBrief(input.taskId, task.prompt);
+
+        // Transition to confirming status — wait for user approval
+        await db.updateTask(input.taskId, { status: "confirming" });
+
+        return { success: true, brief };
+      }),
+
+    /**
+     * User approves the requirements brief and starts pipeline execution.
+     * Status transitions: confirming → running
+     * This is the explicit user consent checkpoint.
+     */
+    approveBrief: protectedProcedure
+      .input(z.object({
+        taskId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        if (task.status !== "confirming") throw new Error("Task is not in confirmation phase");
+
+        // Get the stored brief
+        const briefData = task.requirementsBrief as { brief: string; generatedAt: string } | null;
+        const briefText = briefData?.brief || "";
+
+        // Start pipeline execution with the approved brief
+        simulateAgentPipeline(input.taskId, task.prompt, briefText).catch(console.error);
+
+        return { success: true };
+      }),
+
+    /**
+     * User edits the requirements brief before approving.
+     * Stays in confirming status — user can continue editing or approve.
+     */
+    updateBrief: protectedProcedure
+      .input(z.object({
+        taskId: z.number(),
+        brief: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        if (task.status !== "confirming") throw new Error("Task is not in confirmation phase");
+
+        // Update the stored brief with user's edits
+        await db.updateTask(input.taskId, {
+          requirementsBrief: {
+            brief: input.brief,
+            generatedAt: new Date().toISOString(),
+            editedByUser: true,
+          },
+        });
+
+        // Also save the edited brief as a meeting message for the transcript
+        await db.createMeetingMessage({
+          taskId: input.taskId,
+          sender: "user",
+          round: (task.meetingRound || 0) + 1,
+          content: `[User edited the Requirements Brief]\n\n${input.brief}`,
+          messageType: "brief_edit",
+        });
+
+        return { success: true };
+      }),
+
+    /**
+     * User returns to the meeting to continue discussion.
+     * Status transitions: confirming → clarifying
+     */
+    returnToMeeting: protectedProcedure
+      .input(z.object({
+        taskId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        if (task.status !== "confirming") throw new Error("Task is not in confirmation phase");
+
+        // Return to clarifying status so user can continue the meeting
+        await db.updateTask(input.taskId, { status: "clarifying" });
+
+        // Add a system message to the meeting transcript
+        await db.createMeetingMessage({
+          taskId: input.taskId,
+          sender: "conductor",
+          round: (task.meetingRound || 0) + 1,
+          content: "The user has returned to the meeting for further discussion. Feel free to ask additional questions or provide more context.",
+          messageType: "system",
+        });
+
+        return { success: true };
+      }),
+
+    /**
+     * Legacy: confirmMeeting — kept for backward compatibility.
+     * Now redirects through the new flow: endMeeting + approveBrief.
+     * For skipMeeting tasks, this still works as before.
      */
     confirmMeeting: protectedProcedure
       .input(z.object({
@@ -310,7 +420,9 @@ export const appRouter = router({
         // Append requirements brief if available
         if (task.requirementsBrief) {
           md += `## 需求简报 (Requirements Brief)\n\n`;
-          md += `${typeof task.requirementsBrief === 'string' ? task.requirementsBrief : JSON.stringify(task.requirementsBrief, null, 2)}\n\n`;
+          const briefData = task.requirementsBrief as { brief?: string } | string;
+          const briefText = typeof briefData === 'string' ? briefData : (briefData as { brief?: string }).brief || JSON.stringify(briefData, null, 2);
+          md += `${briefText}\n\n`;
         }
 
         return { markdown: md, taskPrompt: task.prompt };

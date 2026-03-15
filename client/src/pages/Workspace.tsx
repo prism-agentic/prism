@@ -34,6 +34,11 @@ import {
   Rocket,
   Code2,
   Smartphone,
+  Edit3,
+  RotateCcw,
+  ShieldCheck,
+  Save,
+  X,
 } from "lucide-react";
 
 // ─── Agent Definitions ──────────────────────────────────────────────
@@ -276,26 +281,32 @@ function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
       >
         <div className="flex-shrink-0 mt-0.5">
           <div
-            className="w-7 h-7 rounded-md flex items-center justify-center text-sm"
-            style={{ backgroundColor: `${agent.color}15`, border: `1px solid ${agent.color}30` }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+            style={{
+              background: `linear-gradient(135deg, ${agent.color}25, ${agent.color}08)`,
+              border: `1.5px solid ${agent.color}40`,
+            }}
           >
             {agent.emoji}
           </div>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold" style={{ color: agent.color }}>{agent.name}</span>
+            <span className="text-xs font-semibold" style={{ color: agent.color }}>{agent.name}</span>
             {statusIcon}
-            <span className="text-xs text-muted-foreground font-mono">{log.action}</span>
-            <span className="ml-auto flex items-center gap-1">
-              {log.durationMs && (
-                <span className="text-[10px] text-muted-foreground/60 font-mono">{(log.durationMs / 1000).toFixed(1)}s</span>
-              )}
-              {hasLongContent && (
-                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-              )}
-              {isDone && log.content && <CopyButton text={log.content} />}
-            </span>
+            {log.action && (
+              <span className="text-[11px] text-muted-foreground truncate">{log.action}</span>
+            )}
+            {log.durationMs && (
+              <span className="text-[10px] text-muted-foreground/50 ml-auto flex-shrink-0">
+                {(log.durationMs / 1000).toFixed(1)}s
+              </span>
+            )}
+            {hasLongContent && (
+              <ChevronDown
+                className={`w-3 h-3 text-muted-foreground/50 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+              />
+            )}
           </div>
           {isDone && log.content && !isExpanded && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{log.content.substring(0, 150)}...</p>
@@ -373,16 +384,292 @@ function TemplateSelector({
   );
 }
 
+// ─── Requirement Brief Review Component ─────────────────────────────
+// Shown when task status is "confirming" — user reviews the brief before pipeline execution
+
+function RequirementBriefReview({
+  taskId,
+  task,
+  onApproved,
+  onReturnToMeeting,
+}: {
+  taskId: number;
+  task: any;
+  onApproved: () => void;
+  onReturnToMeeting: () => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedBrief, setEditedBrief] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Get the brief from the task's requirementsBrief field
+  const briefData = task?.requirementsBrief as { brief?: string; editedByUser?: boolean } | null;
+  const briefText = briefData?.brief || "";
+  const wasEdited = briefData?.editedByUser || false;
+
+  const approveMutation = trpc.task.approveBrief.useMutation({
+    onSuccess: () => {
+      onApproved();
+    },
+  });
+
+  const updateBriefMutation = trpc.task.updateBrief.useMutation({
+    onSuccess: () => {
+      setIsEditing(false);
+      // Refetch task to get updated brief
+    },
+  });
+
+  const returnMutation = trpc.task.returnToMeeting.useMutation({
+    onSuccess: () => {
+      onReturnToMeeting();
+    },
+  });
+
+  const exportQuery = trpc.task.exportMeeting.useQuery(
+    { taskId },
+    { enabled: false }
+  );
+
+  const isProcessing = approveMutation.isPending || updateBriefMutation.isPending || returnMutation.isPending;
+
+  const handleStartEdit = () => {
+    setEditedBrief(briefText);
+    setIsEditing(true);
+    // Focus textarea after render
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  };
+
+  const handleSaveEdit = () => {
+    if (editedBrief.trim()) {
+      updateBriefMutation.mutate({ taskId, brief: editedBrief.trim() });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedBrief("");
+  };
+
+  const handleExport = async () => {
+    const result = await exportQuery.refetch();
+    if (result.data?.markdown) {
+      const blob = new Blob([result.data.markdown], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `prism-meeting-${taskId}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-border/50 bg-amber-500/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Review Requirements Brief</h3>
+              <p className="text-xs text-muted-foreground">
+                Please review the brief below before starting the pipeline.
+                {wasEdited && (
+                  <span className="ml-1 text-amber-400">(Edited by you)</span>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExport}
+              disabled={exportQuery.isFetching}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-all disabled:opacity-50"
+              title="Export meeting transcript as Markdown"
+            >
+              {exportQuery.isFetching ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Download className="w-3 h-3" />
+              )}
+              <span className="hidden sm:inline">Export .md</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Brief Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-3xl mx-auto">
+          {/* Status Banner */}
+          <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-400">Confirmation Required</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                The PM has generated a Requirements Brief based on the meeting discussion. 
+                Review it carefully — this will be the single source of truth for all 9 agents in the pipeline.
+              </p>
+            </div>
+          </div>
+
+          {/* Brief Card */}
+          {isEditing ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-card/80 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/50 bg-amber-500/5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-semibold text-amber-400">Editing Requirements Brief</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={isProcessing}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
+                  >
+                    <X className="w-3 h-3" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={isProcessing || !editedBrief.trim()}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 transition-all disabled:opacity-50"
+                  >
+                    {updateBriefMutation.isPending ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Save className="w-3 h-3" />
+                    )}
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+              <textarea
+                ref={textareaRef}
+                value={editedBrief}
+                onChange={e => setEditedBrief(e.target.value)}
+                className="w-full min-h-[400px] p-4 bg-transparent text-foreground/90 text-sm font-mono resize-y focus:outline-none"
+                placeholder="Edit the requirements brief in Markdown format..."
+                disabled={isProcessing}
+              />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-500/30 bg-card/80 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/50 bg-amber-500/5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-semibold">Requirements Brief</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
+                    Generated by PM
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CopyButton text={briefText} />
+                  <button
+                    onClick={handleStartEdit}
+                    disabled={isProcessing}
+                    className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border/50 text-muted-foreground hover:text-amber-400 hover:border-amber-500/30 transition-all disabled:opacity-50"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    Edit
+                  </button>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="prose prose-invert prose-sm max-w-none
+                  prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2
+                  prose-h1:text-lg prose-h1:text-amber-400 prose-h1:border-b prose-h1:border-amber-500/20 prose-h1:pb-2
+                  prose-h2:text-base prose-h2:text-foreground
+                  prose-p:text-foreground/80 prose-p:leading-relaxed
+                  prose-li:text-foreground/80
+                  prose-code:text-prism-cyan prose-code:bg-prism-cyan/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                  prose-pre:bg-[#0a1628] prose-pre:border prose-pre:border-border/30 prose-pre:rounded-lg
+                  prose-strong:text-foreground
+                  prose-a:text-prism-cyan prose-a:no-underline hover:prose-a:underline
+                ">
+                  <Streamdown>{briefText || "*No brief content available.*"}</Streamdown>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error messages */}
+          {approveMutation.isError && (
+            <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+              Failed to start pipeline: {approveMutation.error?.message || "Unknown error"}
+            </div>
+          )}
+          {returnMutation.isError && (
+            <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+              Failed to return to meeting: {returnMutation.error?.message || "Unknown error"}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Action Bar */}
+      <div className="border-t border-border/50 p-4 bg-card/30">
+        <div className="flex items-center justify-between max-w-3xl mx-auto">
+          {/* Left: Return to Meeting */}
+          <button
+            onClick={() => returnMutation.mutate({ taskId })}
+            disabled={isProcessing || isEditing}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-all disabled:opacity-50"
+          >
+            {returnMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RotateCcw className="w-4 h-4" />
+            )}
+            Return to Meeting
+          </button>
+
+          {/* Right: Approve & Execute */}
+          <div className="flex items-center gap-3">
+            {!isEditing && (
+              <button
+                onClick={handleStartEdit}
+                disabled={isProcessing}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50"
+              >
+                <Edit3 className="w-4 h-4" />
+                Edit Brief
+              </button>
+            )}
+            <button
+              onClick={() => approveMutation.mutate({ taskId })}
+              disabled={isProcessing || isEditing}
+              className="flex items-center gap-2 px-6 py-2.5 bg-prism-cyan text-prism-navy font-semibold rounded-xl hover:bg-prism-cyan/90 transition-colors disabled:opacity-50 shadow-lg shadow-prism-cyan/20"
+            >
+              {approveMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Zap className="w-4 h-4" />
+              )}
+              Approve & Execute
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Meeting View Component ─────────────────────────────────────────
 
 function MeetingView({
   taskId,
   task,
-  onConfirm,
+  onEndMeeting,
 }: {
   taskId: number;
   task: any;
-  onConfirm: () => void;
+  onEndMeeting: () => void;
 }) {
   const [replyText, setReplyText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -404,9 +691,9 @@ function MeetingView({
     },
   });
 
-  const confirmMutation = trpc.task.confirmMeeting.useMutation({
+  const endMeetingMutation = trpc.task.endMeeting.useMutation({
     onSuccess: () => {
-      onConfirm();
+      onEndMeeting();
     },
   });
 
@@ -418,9 +705,7 @@ function MeetingView({
   const messages = meetingQuery.data || [];
   const feedbacks = feedbacksQuery.data || [];
   const agentMessages = messages.filter(m => m.sender !== "user");
-  const isWaitingForAgents = agentMessages.length === 0 || replyMutation.isPending;
-  const hasBrief = messages.some(m => m.messageType === "brief");
-  const isProcessing = replyMutation.isPending || confirmMutation.isPending;
+  const isProcessing = replyMutation.isPending || endMeetingMutation.isPending;
 
   // Build feedback lookup: messageId -> rating
   const feedbackMap = useMemo(() => {
@@ -465,14 +750,12 @@ function MeetingView({
               <p className="text-xs text-muted-foreground">
                 {messages.length === 0
                   ? "Agents are analyzing your task..."
-                  : hasBrief
-                  ? "Requirements Brief generated. Ready to execute."
-                  : `Round ${task.meetingRound || 1} — ${agentMessages.length} agent messages`}
+                  : `Round ${task?.meetingRound || 1} — ${agentMessages.length} agent messages`}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Export button — show when there are messages */}
+            {/* Export button */}
             {messages.length > 0 && (
               <button
                 onClick={handleExport}
@@ -488,18 +771,19 @@ function MeetingView({
                 <span className="hidden sm:inline">Export .md</span>
               </button>
             )}
-            {!hasBrief && messages.length > 0 && (
+            {/* End Meeting button — generates brief and transitions to confirming */}
+            {messages.length > 0 && (
               <button
-                onClick={() => confirmMutation.mutate({ taskId })}
+                onClick={() => endMeetingMutation.mutate({ taskId })}
                 disabled={isProcessing}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-all disabled:opacity-50"
               >
-                {confirmMutation.isPending ? (
+                {endMeetingMutation.isPending ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
                 ) : (
-                  <PlayCircle className="w-3 h-3" />
+                  <CheckCircle2 className="w-3 h-3" />
                 )}
-                Start Execution
+                End Meeting
               </button>
             )}
           </div>
@@ -552,13 +836,19 @@ function MeetingView({
                 Agents are processing your reply...
               </div>
             )}
+            {endMeetingMutation.isPending && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pl-12">
+                <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                PM is generating the Requirements Brief...
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </>
         )}
       </div>
 
-      {/* Reply Input — only show during clarifying, not after brief */}
-      {!hasBrief && messages.length > 0 && (
+      {/* Reply Input */}
+      {messages.length > 0 && (
         <div className="border-t border-border/50 p-4 bg-card/30">
           <div className="flex gap-3 max-w-4xl mx-auto">
             <div className="flex-1 relative">
@@ -594,46 +884,8 @@ function MeetingView({
             </button>
           </div>
           <p className="text-[11px] text-muted-foreground/50 text-center mt-2">
-            Answer the questions above, or click "Start Execution" to proceed with the agents' best judgment.
+            Answer the questions above, or click "End Meeting" to generate the Requirements Brief for review.
           </p>
-        </div>
-      )}
-
-      {/* After brief generated — show proceed button + export */}
-      {hasBrief && task.status === "clarifying" && (
-        <div className="border-t border-border/50 p-4 bg-emerald-500/5">
-          <div className="flex items-center justify-between max-w-4xl mx-auto">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span className="text-sm text-emerald-400 font-medium">Requirements Brief ready</span>
-              </div>
-              <button
-                onClick={handleExport}
-                disabled={exportQuery.isFetching}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-all disabled:opacity-50"
-              >
-                {exportQuery.isFetching ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Download className="w-3 h-3" />
-                )}
-                Export .md
-              </button>
-            </div>
-            <button
-              onClick={() => confirmMutation.mutate({ taskId })}
-              disabled={confirmMutation.isPending}
-              className="flex items-center gap-2 px-5 py-2.5 bg-prism-cyan text-prism-navy font-semibold rounded-xl hover:bg-prism-cyan/90 transition-colors disabled:opacity-50"
-            >
-              {confirmMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Zap className="w-4 h-4" />
-              )}
-              Start Pipeline Execution
-            </button>
-          </div>
         </div>
       )}
     </div>
@@ -673,10 +925,12 @@ export default function Workspace() {
     },
   });
 
-  // Auto-select latest running/clarifying task
+  // Auto-select latest running/clarifying/confirming task
   useEffect(() => {
     if (!activeTaskId && tasksQuery.data?.length) {
-      const active = tasksQuery.data.find(t => t.status === "running" || t.status === "clarifying");
+      const active = tasksQuery.data.find(t =>
+        t.status === "running" || t.status === "clarifying" || t.status === "confirming"
+      );
       setActiveTaskId(active?.id || tasksQuery.data[0].id);
     }
   }, [tasksQuery.data, activeTaskId]);
@@ -688,7 +942,7 @@ export default function Workspace() {
 
   // Refetch tasks while any is active
   useEffect(() => {
-    if (!tasksQuery.data?.some(t => ["running", "pending", "clarifying"].includes(t.status))) return;
+    if (!tasksQuery.data?.some(t => ["running", "pending", "clarifying", "confirming"].includes(t.status))) return;
     const interval = setInterval(() => tasksQuery.refetch(), 3000);
     return () => clearInterval(interval);
   }, [tasksQuery.data]);
@@ -727,6 +981,7 @@ export default function Workspace() {
 
   // Determine what view to show for the active task
   const isMeetingPhase = activeTask?.status === "clarifying" || (activeTask?.status === "pending" && !activeTask?.meetingRound);
+  const isConfirmingPhase = activeTask?.status === "confirming";
   const isPipelinePhase = activeTask?.status === "running" || activeTask?.status === "completed" || activeTask?.status === "failed";
 
   const handleTemplateSelect = (templatePrompt: string, templateId: string) => {
@@ -761,6 +1016,12 @@ export default function Workspace() {
               <span className="flex items-center gap-1 text-xs text-prism-amber">
                 <MessageSquare className="w-3 h-3" />
                 Requirement Meeting
+              </span>
+            )}
+            {activeTask?.status === "confirming" && (
+              <span className="flex items-center gap-1 text-xs text-amber-400">
+                <ShieldCheck className="w-3 h-3" />
+                Reviewing Brief
               </span>
             )}
             {activeTask?.status === "running" && (
@@ -829,6 +1090,8 @@ export default function Workspace() {
                       <Loader2 className="w-3 h-3 animate-spin text-prism-cyan flex-shrink-0" />
                     ) : task.status === "clarifying" ? (
                       <MessageSquare className="w-3 h-3 text-prism-amber flex-shrink-0" />
+                    ) : task.status === "confirming" ? (
+                      <ShieldCheck className="w-3 h-3 text-amber-400 flex-shrink-0" />
                     ) : task.status === "completed" ? (
                       <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />
                     ) : task.status === "failed" ? (
@@ -851,7 +1114,17 @@ export default function Workspace() {
             <MeetingView
               taskId={activeTaskId}
               task={activeTask}
-              onConfirm={() => tasksQuery.refetch()}
+              onEndMeeting={() => tasksQuery.refetch()}
+            />
+          )}
+
+          {/* Requirement Brief Confirmation View */}
+          {activeTaskId && isConfirmingPhase && (
+            <RequirementBriefReview
+              taskId={activeTaskId}
+              task={activeTask}
+              onApproved={() => tasksQuery.refetch()}
+              onReturnToMeeting={() => tasksQuery.refetch()}
             />
           )}
 
@@ -956,8 +1229,8 @@ export default function Workspace() {
             </div>
           )}
 
-          {/* Input Bar — only show when not in meeting phase */}
-          {(!activeTaskId || isPipelinePhase || (!isMeetingPhase && !isPipelinePhase)) && (
+          {/* Input Bar — only show when not in meeting/confirming phase */}
+          {(!activeTaskId || isPipelinePhase || (!isMeetingPhase && !isConfirmingPhase && !isPipelinePhase)) && (
             <div className="border-t border-border/50 p-4 bg-card/30">
               <div className="flex gap-3 max-w-4xl mx-auto">
                 <div className="flex-1 relative">

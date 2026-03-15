@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, project_id, agent_name, status, duration_ms, LENGTH(output) as output_length, created_at FROM agent_logs WHERE project_id = 30151 ORDER BY created_at ASC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gigjBqoHb8HBVk.da47526c6b62 --database 9FCABgkh4qp24hSM32ug7S --execute SELECT id, project_id, agent_name, status, duration_ms, LENGTH(output) as output_length, created_at FROM agent_logs WHERE project_id = 30151 ORDER BY created_at ASC;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'project_id' in 'where clause'"
+  ]
+}

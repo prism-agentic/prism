@@ -1,0 +1,1 @@
+ALTER TABLE `tasks` MODIFY COLUMN `status` enum('pending','running','clarifying','confirming','completed','failed') NOT NULL DEFAULT 'pending';

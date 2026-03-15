@@ -1,0 +1,8 @@
+{
+  "query": "SELECT sender, agentName, LEFT(content, 2000) AS content_preview FROM meeting_messages WHERE taskId = (SELECT MAX(taskId) FROM agent_logs WHERE status = 'done' AND LENGTH(content) > 1000) ORDER BY id ASC",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gigjBqoHb8HBVk.da47526c6b62 --database 9FCABgkh4qp24hSM32ug7S --execute SELECT sender, agentName, LEFT(content, 2000) AS content_preview FROM meeting_messages WHERE taskId = (SELECT MAX(taskId) FROM agent_logs WHERE status = 'done' AND LENGTH(content) > 1000) ORDER BY id ASC",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'agentname' in 'field list'"
+  ]
+}

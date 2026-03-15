@@ -1,0 +1,40 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'agent_logs' ORDER BY ORDINAL_POSITION",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gigjBqoHb8HBVk.da47526c6b62 --database 9FCABgkh4qp24hSM32ug7S --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'agent_logs' ORDER BY ORDINAL_POSITION",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "taskId"
+    },
+    {
+      "COLUMN_NAME": "agentName"
+    },
+    {
+      "COLUMN_NAME": "agentRole"
+    },
+    {
+      "COLUMN_NAME": "phase"
+    },
+    {
+      "COLUMN_NAME": "action"
+    },
+    {
+      "COLUMN_NAME": "content"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "durationMs"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\ntaskId\nagentName\nagentRole\nphase\naction\ncontent\nstatus\ndurationMs\ncreatedAt\n",
+  "stderr": "",
+  "execution_time_ms": 1500
+}

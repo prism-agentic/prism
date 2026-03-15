@@ -1,0 +1,170 @@
+{
+  "query": "SELECT id, taskId, agentName, status, durationMs, LENGTH(content) as content_len FROM agent_logs WHERE status = 'done' ORDER BY taskId, id LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gigjBqoHb8HBVk.da47526c6b62 --database 9FCABgkh4qp24hSM32ug7S --execute SELECT id, taskId, agentName, status, durationMs, LENGTH(content) as content_len FROM agent_logs WHERE status = 'done' ORDER BY taskId, id LIMIT 20",
+  "rows": [
+    {
+      "id": "3",
+      "taskId": "1",
+      "agentName": "Conductor",
+      "status": "done",
+      "durationMs": "5926",
+      "content_len": "86"
+    },
+    {
+      "id": "6",
+      "taskId": "1",
+      "agentName": "Researcher",
+      "status": "done",
+      "durationMs": "3716",
+      "content_len": "80"
+    },
+    {
+      "id": "9",
+      "taskId": "1",
+      "agentName": "Product Manager",
+      "status": "done",
+      "durationMs": "3976",
+      "content_len": "77"
+    },
+    {
+      "id": "12",
+      "taskId": "1",
+      "agentName": "UX Designer",
+      "status": "done",
+      "durationMs": "3698",
+      "content_len": "84"
+    },
+    {
+      "id": "15",
+      "taskId": "1",
+      "agentName": "Backend Architect",
+      "status": "done",
+      "durationMs": "4175",
+      "content_len": "77"
+    },
+    {
+      "id": "18",
+      "taskId": "1",
+      "agentName": "Frontend Developer",
+      "status": "done",
+      "durationMs": "5927",
+      "content_len": "77"
+    },
+    {
+      "id": "21",
+      "taskId": "1",
+      "agentName": "Backend Architect",
+      "status": "done",
+      "durationMs": "4127",
+      "content_len": "75"
+    },
+    {
+      "id": "24",
+      "taskId": "1",
+      "agentName": "Frontend Developer",
+      "status": "done",
+      "durationMs": "2337",
+      "content_len": "91"
+    },
+    {
+      "id": "27",
+      "taskId": "1",
+      "agentName": "DevOps Engineer",
+      "status": "done",
+      "durationMs": "5243",
+      "content_len": "81"
+    },
+    {
+      "id": "30",
+      "taskId": "1",
+      "agentName": "Quality Critic",
+      "status": "done",
+      "durationMs": "2518",
+      "content_len": "99"
+    },
+    {
+      "id": "33",
+      "taskId": "1",
+      "agentName": "Backend Architect",
+      "status": "done",
+      "durationMs": "2471",
+      "content_len": "83"
+    },
+    {
+      "id": "36",
+      "taskId": "1",
+      "agentName": "DevOps Engineer",
+      "status": "done",
+      "durationMs": "5916",
+      "content_len": "78"
+    },
+    {
+      "id": "39",
+      "taskId": "1",
+      "agentName": "Growth Hacker",
+      "status": "done",
+      "durationMs": "5281",
+      "content_len": "87"
+    },
+    {
+      "id": "45",
+      "taskId": "2",
+      "agentName": "Conductor",
+      "status": "done",
+      "durationMs": "2727",
+      "content_len": "86"
+    },
+    {
+      "id": "49",
+      "taskId": "3",
+      "agentName": "Conductor",
+      "status": "done",
+      "durationMs": "5379",
+      "content_len": "86"
+    },
+    {
+      "id": "51",
+      "taskId": "4",
+      "agentName": "Conductor",
+      "status": "done",
+      "durationMs": "2292",
+      "content_len": "86"
+    },
+    {
+      "id": "57",
+      "taskId": "6",
+      "agentName": "Conductor",
+      "status": "done",
+      "durationMs": "5456",
+      "content_len": "86"
+    },
+    {
+      "id": "60",
+      "taskId": "6",
+      "agentName": "Researcher",
+      "status": "done",
+      "durationMs": "2921",
+      "content_len": "80"
+    },
+    {
+      "id": "63",
+      "taskId": "6",
+      "agentName": "Product Manager",
+      "status": "done",
+      "durationMs": "4784",
+      "content_len": "77"
+    },
+    {
+      "id": "66",
+      "taskId": "6",
+      "agentName": "UX Designer",
+      "status": "done",
+      "durationMs": "3964",
+      "content_len": "84"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttaskId\tagentName\tstatus\tdurationMs\tcontent_len\n3\t1\tConductor\tdone\t5926\t86\n6\t1\tResearcher\tdone\t3716\t80\n9\t1\tProduct Manager\tdone\t3976\t77\n12\t1\tUX Designer\tdone\t3698\t84\n15\t1\tBackend Architect\tdone\t4175\t77\n18\t1\tFrontend Developer\tdone\t5927\t77\n21\t1\tBackend Architect\tdone\t4127\t75\n24\t1\tFrontend Developer\tdone\t2337\t91\n27\t1\tDevOps Engineer\tdone\t5243\t81\n30\t1\tQuality Critic\tdone\t2518\t99\n33\t1\tBackend Architect\tdone\t2471\t83\n36\t1\tDevOps Engineer\tdone\t5916\t78\n39\t1\tGrowth Hacker\tdone\t5281\t87\n45\t2\tConductor\tdone\t2727\t86\n49\t3\tConductor\tdone\t5379\t86\n51\t4\tConductor\tdone\t2292\t86\n57\t6\tConductor\tdone\t5456\t86\n60\t6\tResearcher\tdone\t2921\t80\n63\t6\tProduct Manager\tdone\t4784\t77\n66\t6\tUX Designer\tdone\t3964\t84\n",
+  "stderr": "",
+  "execution_time_ms": 1568
+}

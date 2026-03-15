@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, taskId, agentName, LENGTH(content) AS len FROM agent_logs WHERE status = 'done' AND LENGTH(content) > 100 ORDER BY id DESC LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gigjBqoHb8HBVk.da47526c6b62 --database 9FCABgkh4qp24hSM32ug7S --execute SELECT id, taskId, agentName, LENGTH(content) AS len FROM agent_logs WHERE status = 'done' AND LENGTH(content) > 100 ORDER BY id DESC LIMIT 10",
+  "rows": [
+    {
+      "id": "30452",
+      "taskId": "30127",
+      "agentName": "Growth Hacker",
+      "len": "228"
+    },
+    {
+      "id": "30449",
+      "taskId": "30127",
+      "agentName": "Quality Critic",
+      "len": "228"
+    },
+    {
+      "id": "30446",
+      "taskId": "30127",
+      "agentName": "DevOps Engineer",
+      "len": "228"
+    },
+    {
+      "id": "30443",
+      "taskId": "30127",
+      "agentName": "Frontend Developer",
+      "len": "232"
+    },
+    {
+      "id": "30440",
+      "taskId": "30127",
+      "agentName": "Backend Architect",
+      "len": "230"
+    },
+    {
+      "id": "30437",
+      "taskId": "30127",
+      "agentName": "Frontend Developer",
+      "len": "232"
+    },
+    {
+      "id": "30434",
+      "taskId": "30127",
+      "agentName": "Backend Architect",
+      "len": "230"
+    },
+    {
+      "id": "30431",
+      "taskId": "30127",
+      "agentName": "UX Designer",
+      "len": "220"
+    },
+    {
+      "id": "30428",
+      "taskId": "30127",
+      "agentName": "Product Manager",
+      "len": "220"
+    },
+    {
+      "id": "30425",
+      "taskId": "30127",
+      "agentName": "Researcher",
+      "len": "236"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttaskId\tagentName\tlen\n30452\t30127\tGrowth Hacker\t228\n30449\t30127\tQuality Critic\t228\n30446\t30127\tDevOps Engineer\t228\n30443\t30127\tFrontend Developer\t232\n30440\t30127\tBackend Architect\t230\n30437\t30127\tFrontend Developer\t232\n30434\t30127\tBackend Architect\t230\n30431\t30127\tUX Designer\t220\n30428\t30127\tProduct Manager\t220\n30425\t30127\tResearcher\t236\n",
+  "stderr": "",
+  "execution_time_ms": 1544
+}

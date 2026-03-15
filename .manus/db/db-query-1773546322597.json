@@ -1,0 +1,190 @@
+{
+  "query": "SELECT id, taskId, agentName, agentRole, status, LENGTH(content) AS len, durationMs FROM agent_logs WHERE status = 'done' ORDER BY id ASC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gigjBqoHb8HBVk.da47526c6b62 --database 9FCABgkh4qp24hSM32ug7S --execute SELECT id, taskId, agentName, agentRole, status, LENGTH(content) AS len, durationMs FROM agent_logs WHERE status = 'done' ORDER BY id ASC LIMIT 20",
+  "rows": [
+    {
+      "id": "3",
+      "taskId": "1",
+      "agentName": "Conductor",
+      "agentRole": "conductor",
+      "status": "done",
+      "len": "86",
+      "durationMs": "5926"
+    },
+    {
+      "id": "6",
+      "taskId": "1",
+      "agentName": "Researcher",
+      "agentRole": "researcher",
+      "status": "done",
+      "len": "80",
+      "durationMs": "3716"
+    },
+    {
+      "id": "9",
+      "taskId": "1",
+      "agentName": "Product Manager",
+      "agentRole": "pm",
+      "status": "done",
+      "len": "77",
+      "durationMs": "3976"
+    },
+    {
+      "id": "12",
+      "taskId": "1",
+      "agentName": "UX Designer",
+      "agentRole": "ux",
+      "status": "done",
+      "len": "84",
+      "durationMs": "3698"
+    },
+    {
+      "id": "15",
+      "taskId": "1",
+      "agentName": "Backend Architect",
+      "agentRole": "backend",
+      "status": "done",
+      "len": "77",
+      "durationMs": "4175"
+    },
+    {
+      "id": "18",
+      "taskId": "1",
+      "agentName": "Frontend Developer",
+      "agentRole": "frontend",
+      "status": "done",
+      "len": "77",
+      "durationMs": "5927"
+    },
+    {
+      "id": "21",
+      "taskId": "1",
+      "agentName": "Backend Architect",
+      "agentRole": "backend",
+      "status": "done",
+      "len": "75",
+      "durationMs": "4127"
+    },
+    {
+      "id": "24",
+      "taskId": "1",
+      "agentName": "Frontend Developer",
+      "agentRole": "frontend",
+      "status": "done",
+      "len": "91",
+      "durationMs": "2337"
+    },
+    {
+      "id": "27",
+      "taskId": "1",
+      "agentName": "DevOps Engineer",
+      "agentRole": "devops",
+      "status": "done",
+      "len": "81",
+      "durationMs": "5243"
+    },
+    {
+      "id": "30",
+      "taskId": "1",
+      "agentName": "Quality Critic",
+      "agentRole": "critic",
+      "status": "done",
+      "len": "99",
+      "durationMs": "2518"
+    },
+    {
+      "id": "33",
+      "taskId": "1",
+      "agentName": "Backend Architect",
+      "agentRole": "backend",
+      "status": "done",
+      "len": "83",
+      "durationMs": "2471"
+    },
+    {
+      "id": "36",
+      "taskId": "1",
+      "agentName": "DevOps Engineer",
+      "agentRole": "devops",
+      "status": "done",
+      "len": "78",
+      "durationMs": "5916"
+    },
+    {
+      "id": "39",
+      "taskId": "1",
+      "agentName": "Growth Hacker",
+      "agentRole": "growth",
+      "status": "done",
+      "len": "87",
+      "durationMs": "5281"
+    },
+    {
+      "id": "45",
+      "taskId": "2",
+      "agentName": "Conductor",
+      "agentRole": "conductor",
+      "status": "done",
+      "len": "86",
+      "durationMs": "2727"
+    },
+    {
+      "id": "49",
+      "taskId": "3",
+      "agentName": "Conductor",
+      "agentRole": "conductor",
+      "status": "done",
+      "len": "86",
+      "durationMs": "5379"
+    },
+    {
+      "id": "51",
+      "taskId": "4",
+      "agentName": "Conductor",
+      "agentRole": "conductor",
+      "status": "done",
+      "len": "86",
+      "durationMs": "2292"
+    },
+    {
+      "id": "57",
+      "taskId": "6",
+      "agentName": "Conductor",
+      "agentRole": "conductor",
+      "status": "done",
+      "len": "86",
+      "durationMs": "5456"
+    },
+    {
+      "id": "60",
+      "taskId": "6",
+      "agentName": "Researcher",
+      "agentRole": "researcher",
+      "status": "done",
+      "len": "80",
+      "durationMs": "2921"
+    },
+    {
+      "id": "63",
+      "taskId": "6",
+      "agentName": "Product Manager",
+      "agentRole": "pm",
+      "status": "done",
+      "len": "77",
+      "durationMs": "4784"
+    },
+    {
+      "id": "66",
+      "taskId": "6",
+      "agentName": "UX Designer",
+      "agentRole": "ux",
+      "status": "done",
+      "len": "84",
+      "durationMs": "3964"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttaskId\tagentName\tagentRole\tstatus\tlen\tdurationMs\n3\t1\tConductor\tconductor\tdone\t86\t5926\n6\t1\tResearcher\tresearcher\tdone\t80\t3716\n9\t1\tProduct Manager\tpm\tdone\t77\t3976\n12\t1\tUX Designer\tux\tdone\t84\t3698\n15\t1\tBackend Architect\tbackend\tdone\t77\t4175\n18\t1\tFrontend Developer\tfrontend\tdone\t77\t5927\n21\t1\tBackend Architect\tbackend\tdone\t75\t4127\n24\t1\tFrontend Developer\tfrontend\tdone\t91\t2337\n27\t1\tDevOps Engineer\tdevops\tdone\t81\t5243\n30\t1\tQuality Critic\tcritic\tdone\t99\t2518\n33\t1\tBackend Architect\tbackend\tdone\t83\t2471\n36\t1\tDevOps Engineer\tdevops\tdone\t78\t5916\n39\t1\tGrowth Hacker\tgrowth\tdone\t87\t5281\n45\t2\tConductor\tconductor\tdone\t86\t2727\n49\t3\tConductor\tconductor\tdone\t86\t5379\n51\t4\tConductor\tconductor\tdone\t86\t2292\n57\t6\tConductor\tconductor\tdone\t86\t5456\n60\t6\tResearcher\tresearcher\tdone\t80\t2921\n63\t6\tProduct Manager\tpm\tdone\t77\t4784\n66\t6\tUX Designer\tux\tdone\t84\t3964\n",
+  "stderr": "",
+  "execution_time_ms": 1665
+}

@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, taskId, agentName, agentRole, LENGTH(content) AS len, durationMs FROM agent_logs WHERE taskId = (SELECT MAX(taskId) FROM agent_logs WHERE status = 'done' AND LENGTH(content) > 1000) AND status = 'done' ORDER BY id ASC",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gigjBqoHb8HBVk.da47526c6b62 --database 9FCABgkh4qp24hSM32ug7S --execute SELECT id, taskId, agentName, agentRole, LENGTH(content) AS len, durationMs FROM agent_logs WHERE taskId = (SELECT MAX(taskId) FROM agent_logs WHERE status = 'done' AND LENGTH(content) > 1000) AND status = 'done' ORDER BY id ASC",
+  "rows": [
+    {
+      "id": "30414",
+      "taskId": "30126",
+      "agentName": "Conductor",
+      "agentRole": "conductor",
+      "len": "6750",
+      "durationMs": "8808"
+    },
+    {
+      "id": "30417",
+      "taskId": "30126",
+      "agentName": "Researcher",
+      "agentRole": "researcher",
+      "len": "13272",
+      "durationMs": "16909"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttaskId\tagentName\tagentRole\tlen\tdurationMs\n30414\t30126\tConductor\tconductor\t6750\t8808\n30417\t30126\tResearcher\tresearcher\t13272\t16909\n",
+  "stderr": "",
+  "execution_time_ms": 1538
+}

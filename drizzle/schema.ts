@@ -40,7 +40,7 @@ export type InsertProject = typeof projects.$inferInsert;
  * Tasks — each project can have multiple tasks (pipeline runs)
  * 
  * Status flow:
- *   pending → clarifying (requirement meeting) → running (pipeline execution) → completed/failed
+ *   pending → clarifying (requirement meeting) → confirming (review brief) → running (pipeline) → completed/failed
  *   pending → running (skip meeting / fast mode) → completed/failed
  */
 export const tasks = mysqlTable("tasks", {
@@ -48,7 +48,7 @@ export const tasks = mysqlTable("tasks", {
   projectId: int("projectId").notNull(),
   userId: int("userId").notNull(),
   prompt: text("prompt").notNull(),
-  status: mysqlEnum("status", ["pending", "running", "clarifying", "completed", "failed"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "running", "clarifying", "confirming", "completed", "failed"]).default("pending").notNull(),
   currentPhase: int("currentPhase").default(0),
   totalPhases: int("totalPhases").default(6),
   result: json("result"),

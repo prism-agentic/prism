@@ -1,0 +1,8 @@
+{
+  "query": "SELECT agent_name AS name, status, LENGTH(content) AS content_length, LEFT(content, 2000) AS content_preview, duration_ms FROM agent_logs WHERE status = 'done' ORDER BY id ASC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gigjBqoHb8HBVk.da47526c6b62 --database 9FCABgkh4qp24hSM32ug7S --execute SELECT agent_name AS name, status, LENGTH(content) AS content_length, LEFT(content, 2000) AS content_preview, duration_ms FROM agent_logs WHERE status = 'done' ORDER BY id ASC LIMIT 20",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'agent_name' in 'field list'"
+  ]
+}

@@ -29,6 +29,13 @@
       "when": 1773541910116,
       "tag": "0003_equal_angel",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1773547784758,
+      "tag": "0004_common_franklin_richards",
+      "breakpoints": true
     }
   ]
 }
