@@ -44,85 +44,85 @@ interface AgentMeta {
 
 const AGENT_META: Record<string, AgentMeta> = {
   conductor: {
-    name: "Conductor",
+    name: "指挥官",
     icon: <Zap className="w-4 h-4" />,
     color: "#00d4ff",
     category: "planning",
-    categoryLabel: "Planning & Discovery",
-    description: "Task decomposition and orchestration",
+    categoryLabel: "规划与探索",
+    description: "任务分解与编排调度",
   },
   researcher: {
-    name: "Researcher",
+    name: "调研员",
     icon: <Search className="w-4 h-4" />,
     color: "#00d4ff",
     category: "planning",
-    categoryLabel: "Planning & Discovery",
-    description: "Technology research and market analysis",
+    categoryLabel: "规划与探索",
+    description: "技术调研与市场分析",
   },
   pm: {
-    name: "Product Manager",
+    name: "产品经理",
     icon: <FileText className="w-4 h-4" />,
     color: "#f59e0b",
     category: "requirements",
-    categoryLabel: "Requirements & Design",
-    description: "User stories, MVP scope, and success metrics",
+    categoryLabel: "需求与设计",
+    description: "用户故事、MVP 范围与成功指标",
   },
   ux: {
-    name: "UX Designer",
+    name: "UX 设计师",
     icon: <Palette className="w-4 h-4" />,
     color: "#f59e0b",
     category: "requirements",
-    categoryLabel: "Requirements & Design",
-    description: "Information architecture and visual design",
+    categoryLabel: "需求与设计",
+    description: "信息架构与视觉设计",
   },
   backend: {
-    name: "Backend Architect",
+    name: "后端架构师",
     icon: <Settings className="w-4 h-4" />,
     color: "#10b981",
     category: "technical",
-    categoryLabel: "Technical Design",
-    description: "Database schema, API design, and architecture",
+    categoryLabel: "技术设计",
+    description: "数据库设计、API 设计与架构",
   },
   frontend: {
-    name: "Frontend Developer",
+    name: "前端开发",
     icon: <Code2 className="w-4 h-4" />,
     color: "#10b981",
     category: "technical",
-    categoryLabel: "Technical Design",
-    description: "Component architecture and UI implementation",
+    categoryLabel: "技术设计",
+    description: "组件架构与 UI 实现",
   },
   devops: {
-    name: "DevOps Engineer",
+    name: "DevOps 工程师",
     icon: <Rocket className="w-4 h-4" />,
     color: "#10b981",
     category: "technical",
-    categoryLabel: "Technical Design",
-    description: "CI/CD pipeline and infrastructure",
+    categoryLabel: "技术设计",
+    description: "CI/CD 流水线与基础设施",
   },
   critic: {
-    name: "Quality Critic",
+    name: "质量评审",
     icon: <Shield className="w-4 h-4" />,
     color: "#a855f7",
     category: "quality",
-    categoryLabel: "Quality & Growth",
-    description: "Code review and security assessment",
+    categoryLabel: "质量与增长",
+    description: "代码审查与安全评估",
   },
   growth: {
-    name: "Growth Hacker",
+    name: "增长专家",
     icon: <BarChart3 className="w-4 h-4" />,
     color: "#a855f7",
     category: "quality",
-    categoryLabel: "Quality & Growth",
-    description: "Launch strategy and growth tactics",
+    categoryLabel: "质量与增长",
+    description: "发布策略与增长战术",
   },
 };
 
 const CATEGORIES = [
-  { id: "all", label: "All Deliverables", icon: <Bot className="w-4 h-4" /> },
-  { id: "planning", label: "Planning", icon: <Search className="w-4 h-4" /> },
-  { id: "requirements", label: "Requirements", icon: <FileText className="w-4 h-4" /> },
-  { id: "technical", label: "Technical", icon: <Code2 className="w-4 h-4" /> },
-  { id: "quality", label: "Quality & Growth", icon: <Shield className="w-4 h-4" /> },
+  { id: "all", label: "全部交付物", icon: <Bot className="w-4 h-4" /> },
+  { id: "planning", label: "规划", icon: <Search className="w-4 h-4" /> },
+  { id: "requirements", label: "需求", icon: <FileText className="w-4 h-4" /> },
+  { id: "technical", label: "技术", icon: <Code2 className="w-4 h-4" /> },
+  { id: "quality", label: "质量与增长", icon: <Shield className="w-4 h-4" /> },
 ];
 
 // ─── Helper: Copy to Clipboard ─────────────────────────────────────
@@ -138,7 +138,7 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all"
     >
       {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-      {copied ? "Copied!" : label}
+      {copied ? "已复制" : label}
     </button>
   );
 }
@@ -198,7 +198,7 @@ function DeliverableCard({
             </span>
           )}
           <span className="text-xs text-muted-foreground/60 font-mono">
-            {(content.length / 1000).toFixed(1)}k chars
+            {(content.length / 1000).toFixed(1)}k 字符
           </span>
           {isExpanded ? (
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -213,13 +213,13 @@ function DeliverableCard({
         <div className="border-t border-border/30">
           {/* Action Bar */}
           <div className="flex items-center gap-2 px-4 py-2 bg-background/30 border-b border-border/20">
-            <CopyButton text={content} label="Copy Markdown" />
+            <CopyButton text={content} label="复制 Markdown" />
             <button
               onClick={() => downloadMarkdown(content, `${meta.name.toLowerCase().replace(/\s+/g, "-")}-output.md`)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all"
             >
               <Download className="w-3 h-3" />
-              Download .md
+              下载 .md
             </button>
           </div>
 
@@ -265,12 +265,12 @@ function buildFullExport(
   deliverables: Array<{ agentRole: string; content: string; durationMs: number | null }>,
 ): string {
   const lines: string[] = [];
-  lines.push(`# PRISM Task Report`);
+  lines.push(`# PRISM 任务报告`);
   lines.push("");
-  lines.push(`> **Task:** ${taskPrompt}`);
-  lines.push(`> **Generated by:** PRISM Multi-Agent Framework`);
-  lines.push(`> **Date:** ${new Date().toLocaleDateString()}`);
-  lines.push(`> **Agents Used:** ${deliverables.length}`);
+  lines.push(`> **任务:** ${taskPrompt}`);
+  lines.push(`> **生成方:** PRISM 多智能体框架`);
+  lines.push(`> **日期:** ${new Date().toLocaleDateString()}`);
+  lines.push(`> **参与智能体:** ${deliverables.length}`);
   lines.push("");
   lines.push("---");
   lines.push("");
@@ -281,7 +281,7 @@ function buildFullExport(
     const desc = meta?.description ?? "";
     lines.push(`## ${name}`);
     if (desc) lines.push(`*${desc}*`);
-    if (d.durationMs) lines.push(`*Processing time: ${(d.durationMs / 1000).toFixed(1)}s*`);
+    if (d.durationMs) lines.push(`*处理时间: ${(d.durationMs / 1000).toFixed(1)}秒*`);
     lines.push("");
     lines.push(d.content);
     lines.push("");
@@ -378,7 +378,7 @@ export default function TaskResults() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-prism-cyan/30 border-t-prism-cyan rounded-full animate-spin" />
-          <span className="text-sm text-muted-foreground font-mono">Loading results...</span>
+          <span className="text-sm text-muted-foreground font-mono">加载结果中...</span>
         </div>
       </div>
     );
@@ -400,8 +400,8 @@ export default function TaskResults() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-lg font-semibold mb-2">Task not found</h2>
-          <Link href="/dashboard" className="text-prism-cyan hover:underline">Back to Dashboard</Link>
+          <h2 className="text-lg font-semibold mb-2">任务未找到</h2>
+          <Link href="/dashboard" className="text-prism-cyan hover:underline">返回控制台</Link>
         </div>
       </div>
     );
@@ -421,14 +421,14 @@ export default function TaskResults() {
               className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm hidden sm:inline">Workspace</span>
+              <span className="text-sm hidden sm:inline">工作区</span>
             </Link>
             <ChevronRight className="w-3 h-3 text-border" />
-            <span className="font-display font-semibold text-sm">Task Results</span>
+            <span className="font-display font-semibold text-sm">任务结果</span>
             {isRunning && (
               <span className="flex items-center gap-1 text-xs text-prism-cyan">
                 <span className="w-1.5 h-1.5 rounded-full bg-prism-cyan animate-pulse" />
-                In Progress...
+                进行中...
               </span>
             )}
           </div>
@@ -448,8 +448,8 @@ export default function TaskResults() {
               className="flex items-center gap-2 px-4 py-2 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:bg-prism-cyan/90 transition-colors text-sm"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export Full Report</span>
-              <span className="sm:hidden">Export</span>
+              <span className="hidden sm:inline">导出完整报告</span>
+              <span className="sm:hidden">导出</span>
             </button>
           )}
         </div>
@@ -478,10 +478,10 @@ export default function TaskResults() {
               <h1 className="text-lg font-display font-bold mb-1 break-words">{task.prompt}</h1>
               <p className="text-sm text-muted-foreground">
                 {isCompleted
-                  ? `Completed by ${deliverables.length} AI agents across 6 pipeline phases`
+                  ? `由 ${deliverables.length} 个 AI 智能体通过 6 个流水线阶段完成`
                   : isRunning
-                  ? "AI agents are currently working on this task..."
-                  : "Task is queued for processing"}
+                  ? "AI 智能体正在处理此任务..."
+                  : "任务已排队等待处理"}
               </p>
             </div>
 
@@ -489,19 +489,19 @@ export default function TaskResults() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:gap-4 flex-shrink-0">
               <div className="text-center p-3 rounded-lg bg-background/50 border border-border/30">
                 <p className="text-lg font-bold text-prism-cyan">{deliverables.length}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Agents</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">智能体</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-background/50 border border-border/30">
                 <p className="text-lg font-bold text-prism-amber">6</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Phases</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">阶段</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-background/50 border border-border/30">
                 <p className="text-lg font-bold text-foreground">{(totalDuration / 1000).toFixed(0)}s</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Time</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">总时间</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-background/50 border border-border/30">
                 <p className="text-lg font-bold text-foreground">{(totalChars / 1000).toFixed(1)}k</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Characters</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">字符数</p>
               </div>
             </div>
           </div>
@@ -510,9 +510,9 @@ export default function TaskResults() {
           {isRunning && (
             <div className="mt-4 pt-4 border-t border-border/30">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">Pipeline Progress</span>
+                <span className="text-xs text-muted-foreground">流水线进度</span>
                 <span className="text-xs font-mono text-prism-cyan">
-                  Phase {(task.currentPhase || 0) + 1} / {task.totalPhases || 6}
+                  阶段 {(task.currentPhase || 0) + 1} / {task.totalPhases || 6}
                 </span>
               </div>
               <Progress
@@ -545,14 +545,14 @@ export default function TaskResults() {
               onClick={expandAll}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
             >
-              Expand All
+              全部展开
             </button>
             <span className="text-border">|</span>
             <button
               onClick={collapseAll}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
             >
-              Collapse All
+              全部收起
             </button>
           </div>
         </div>
@@ -564,12 +564,12 @@ export default function TaskResults() {
               <FileText className="w-8 h-8 text-muted-foreground/30" />
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              {isRunning ? "Results are being generated..." : "No deliverables yet"}
+              {isRunning ? "结果生成中..." : "暂无交付物"}
             </h3>
             <p className="text-sm text-muted-foreground">
               {isRunning
-                ? "AI agents are working on your task. Results will appear here as they complete."
-                : "This task has no deliverables in the selected category."}
+                ? "AI 智能体正在处理你的任务。完成后结果将显示在此处。"
+                : "所选分类中没有交付物。"}
             </p>
           </div>
         ) : (
@@ -593,9 +593,9 @@ export default function TaskResults() {
         {/* Bottom Export Section */}
         {isCompleted && deliverables.length > 0 && (
           <div className="mt-8 p-6 rounded-xl border border-border/30 bg-card/20 text-center">
-            <h3 className="text-sm font-semibold mb-2">Export Complete Report</h3>
+            <h3 className="text-sm font-semibold mb-2">导出完整报告</h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Download all {deliverables.length} agent deliverables as a single Markdown document
+              将全部 {deliverables.length} 个智能体交付物导出为单个 Markdown 文档
             </p>
             <div className="flex items-center justify-center gap-3">
               <button
@@ -613,7 +613,7 @@ export default function TaskResults() {
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:bg-prism-cyan/90 transition-colors text-sm"
               >
                 <Download className="w-4 h-4" />
-                Download Markdown Report
+                下载 Markdown 报告
               </button>
               <CopyButton
                 text={buildFullExport(
@@ -624,7 +624,7 @@ export default function TaskResults() {
                     durationMs: d.durationMs,
                   })),
                 )}
-                label="Copy All"
+                label="复制全部"
               />
             </div>
           </div>

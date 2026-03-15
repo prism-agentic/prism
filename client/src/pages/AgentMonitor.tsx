@@ -37,18 +37,18 @@ interface AgentDef {
 }
 
 const AGENTS: AgentDef[] = [
-  { name: "Conductor", role: "conductor", icon: <Zap className="w-4 h-4" />, color: "#00d4ff", department: "Specialized", phase: [0] },
-  { name: "Researcher", role: "researcher", icon: <Search className="w-4 h-4" />, color: "#00d4ff", department: "Specialized", phase: [0] },
-  { name: "Product Manager", role: "pm", icon: <FileText className="w-4 h-4" />, color: "#f59e0b", department: "Business", phase: [1] },
-  { name: "UX Designer", role: "ux", icon: <Palette className="w-4 h-4" />, color: "#f59e0b", department: "Design", phase: [1] },
-  { name: "Backend Architect", role: "backend", icon: <Settings className="w-4 h-4" />, color: "#10b981", department: "Engineering", phase: [2, 3] },
-  { name: "Frontend Developer", role: "frontend", icon: <Code2 className="w-4 h-4" />, color: "#10b981", department: "Engineering", phase: [2, 3] },
-  { name: "DevOps Engineer", role: "devops", icon: <Rocket className="w-4 h-4" />, color: "#10b981", department: "Engineering", phase: [3] },
-  { name: "Quality Critic", role: "critic", icon: <Shield className="w-4 h-4" />, color: "#a855f7", department: "Specialized", phase: [4] },
-  { name: "Growth Hacker", role: "growth", icon: <BarChart3 className="w-4 h-4" />, color: "#a855f7", department: "Business", phase: [5] },
+  { name: "指挥官", role: "conductor", icon: <Zap className="w-4 h-4" />, color: "#00d4ff", department: "专业", phase: [0] },
+  { name: "调研员", role: "researcher", icon: <Search className="w-4 h-4" />, color: "#00d4ff", department: "专业", phase: [0] },
+  { name: "产品经理", role: "pm", icon: <FileText className="w-4 h-4" />, color: "#f59e0b", department: "业务", phase: [1] },
+  { name: "UX 设计师", role: "ux", icon: <Palette className="w-4 h-4" />, color: "#f59e0b", department: "设计", phase: [1] },
+  { name: "后端架构师", role: "backend", icon: <Settings className="w-4 h-4" />, color: "#10b981", department: "工程", phase: [2, 3] },
+  { name: "前端开发", role: "frontend", icon: <Code2 className="w-4 h-4" />, color: "#10b981", department: "工程", phase: [2, 3] },
+  { name: "DevOps 工程师", role: "devops", icon: <Rocket className="w-4 h-4" />, color: "#10b981", department: "工程", phase: [3] },
+  { name: "质量评审", role: "critic", icon: <Shield className="w-4 h-4" />, color: "#a855f7", department: "专业", phase: [4] },
+  { name: "增长专家", role: "growth", icon: <BarChart3 className="w-4 h-4" />, color: "#a855f7", department: "业务", phase: [5] },
 ];
 
-const PHASE_NAMES = ["Discover", "Strategy", "Scaffold", "Build", "Harden", "Launch"];
+const PHASE_NAMES = ["探索", "策略", "搭建", "构建", "加固", "发布"];
 const PHASE_COLORS = ["#00d4ff", "#f59e0b", "#10b981", "#10b981", "#a855f7", "#a855f7"];
 
 // ─── Agent Node Component ──────────────────────────────────────────
@@ -280,7 +280,7 @@ export default function AgentMonitor() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-prism-cyan/30 border-t-prism-cyan rounded-full animate-spin" />
-          <span className="text-sm text-muted-foreground font-mono">Loading monitor...</span>
+          <span className="text-sm text-muted-foreground font-mono">加载监控中...</span>
         </div>
       </div>
     );
@@ -290,8 +290,8 @@ export default function AgentMonitor() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-lg font-semibold mb-2">Task not found</h2>
-          <Link href="/dashboard" className="text-prism-cyan hover:underline">Back to Dashboard</Link>
+          <h2 className="text-lg font-semibold mb-2">任务未找到</h2>
+          <Link href="/dashboard" className="text-prism-cyan hover:underline">返回控制台</Link>
         </div>
       </div>
     );
@@ -313,15 +313,15 @@ export default function AgentMonitor() {
               className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm hidden sm:inline">Workspace</span>
+              <span className="text-sm hidden sm:inline">工作区</span>
             </Link>
             <ChevronRight className="w-3 h-3 text-border" />
             <span className="font-display font-semibold text-sm flex items-center gap-2">
-              Agent Monitor
+              智能体监控
               {isRunning && (
                 <span className="flex items-center gap-1 text-xs text-prism-cyan font-normal">
                   <span className="w-1.5 h-1.5 rounded-full bg-prism-cyan animate-pulse" />
-                  Live
+                  实时
                 </span>
               )}
             </span>
@@ -331,7 +331,7 @@ export default function AgentMonitor() {
               href={`/results/${task.id}`}
               className="text-xs text-muted-foreground hover:text-prism-cyan transition-colors flex items-center gap-1"
             >
-              View Results <ExternalLink className="w-3 h-3" />
+              查看结果 <ExternalLink className="w-3 h-3" />
             </Link>
           </div>
         </div>
@@ -344,8 +344,8 @@ export default function AgentMonitor() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate">{task.prompt}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {completedAgents}/{AGENTS.length} agents completed
-                {totalDuration > 0 && ` | Total: ${(totalDuration / 1000).toFixed(0)}s`}
+                {completedAgents}/{AGENTS.length} 个智能体已完成
+                {totalDuration > 0 && ` | 总耗时: ${(totalDuration / 1000).toFixed(0)}秒`}
               </p>
             </div>
             <Badge
@@ -368,10 +368,10 @@ export default function AgentMonitor() {
 
         {/* Agent Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Agent Network Grid */}
+          {/* Left: 智能体网络 Grid */}
           <div className="lg:col-span-2">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Agent Network
+              智能体网络
             </h3>
 
             {/* Phase-grouped agent grid */}
@@ -421,10 +421,10 @@ export default function AgentMonitor() {
             </div>
           </div>
 
-          {/* Right: Agent Detail Panel */}
+          {/* Right: 智能体详情 Panel */}
           <div className="lg:col-span-1">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Agent Detail
+              智能体详情
             </h3>
 
             {selectedAgent && selectedAgentDef && selectedAgentData ? (
@@ -452,7 +452,7 @@ export default function AgentMonitor() {
                 {/* Status */}
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Status</span>
+                    <span className="text-xs text-muted-foreground">状态</span>
                     <Badge
                       variant="outline"
                       className={
@@ -468,13 +468,13 @@ export default function AgentMonitor() {
                   </div>
                   {selectedAgentData.action && (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Action</span>
+                      <span className="text-xs text-muted-foreground">操作</span>
                       <span className="text-xs font-mono text-foreground/70">{selectedAgentData.action}</span>
                     </div>
                   )}
                   {selectedAgentData.durationMs && (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Duration</span>
+                      <span className="text-xs text-muted-foreground">耗时</span>
                       <span className="text-xs font-mono text-foreground/70 flex items-center gap-1">
                         <Timer className="w-3 h-3" />
                         {(selectedAgentData.durationMs / 1000).toFixed(1)}s
@@ -482,7 +482,7 @@ export default function AgentMonitor() {
                     </div>
                   )}
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Pipeline Phase</span>
+                    <span className="text-xs text-muted-foreground">流水线阶段</span>
                     <span className="text-xs font-mono text-foreground/70">
                       {selectedAgentDef.phase.map(p => PHASE_NAMES[p]).join(", ")}
                     </span>
@@ -493,12 +493,12 @@ export default function AgentMonitor() {
                 {selectedAgentData.content && (
                   <div className="border-t border-border/30 pt-3">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-muted-foreground">Output Preview</span>
+                      <span className="text-xs text-muted-foreground">输出预览</span>
                       <Link
                         href={`/results/${taskId}`}
                         className="text-[10px] text-prism-cyan hover:underline flex items-center gap-1"
                       >
-                        Full View <ExternalLink className="w-2.5 h-2.5" />
+                        完整查看 <ExternalLink className="w-2.5 h-2.5" />
                       </Link>
                     </div>
                     <div className="rounded-lg bg-background/50 border border-border/20 p-3 max-h-[300px] overflow-y-auto text-xs text-foreground/70 font-mono whitespace-pre-wrap">
@@ -512,7 +512,7 @@ export default function AgentMonitor() {
               <div className="rounded-xl border border-border/30 bg-card/20 p-8 text-center">
                 <Bot className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">
-                  Click on an agent to view its details
+                  点击智能体查看详情
                 </p>
               </div>
             )}
@@ -520,7 +520,7 @@ export default function AgentMonitor() {
             {/* Timeline */}
             <div className="mt-4 rounded-xl border border-border/30 bg-card/20 p-4">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                Execution Timeline
+                执行时间线
               </h4>
               <div className="space-y-2">
                 {AGENTS.map(agent => {

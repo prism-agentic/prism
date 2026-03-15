@@ -145,4 +145,11 @@
 
 ## UI 优化 — 移除 Hero 区域"快速开始"按钮
 - [x] 移除首页 Hero 区域的“快速开始”按钮
+- [x] 保存 checkpoint
+
+## UI 优化 — Dashboard/Workspace 全部改为中文
+- [x] Dashboard 页面文案中文化（项目管理、统计卡片、创建项目弹窗、模板等）
+- [x] Workspace 页面文案中文化（任务列表、会议 UI、需求确认、流水线、输入栏等）
+- [x] ModelSelector 组件文案中文化（模型选择、Tier 标签等）
+- [x] 其他共享组件中文化（NotFound、AgentMonitor、TaskResults等）
 - [ ] 保存 checkpoint

@@ -45,19 +45,19 @@ import ModelSelector from "@/components/ModelSelector";
 // ─── Agent Definitions ──────────────────────────────────────────────
 
 const AGENTS: Record<string, { name: string; color: string; emoji: string }> = {
-  conductor: { name: "Conductor", color: "#00d4ff", emoji: "\u{1F3AF}" },
-  researcher: { name: "Researcher", color: "#a78bfa", emoji: "\u{1F50D}" },
-  pm: { name: "Product Manager", color: "#f59e0b", emoji: "\u{1F4CB}" },
-  ux: { name: "UX Designer", color: "#f59e0b", emoji: "\u{1F3A8}" },
-  backend: { name: "Backend Architect", color: "#00d4ff", emoji: "\u2699\uFE0F" },
-  frontend: { name: "Frontend Dev", color: "#00d4ff", emoji: "\u{1F4BB}" },
-  devops: { name: "DevOps Engineer", color: "#00d4ff", emoji: "\u{1F680}" },
-  critic: { name: "Quality Critic", color: "#00d4ff", emoji: "\u{1F50E}" },
-  growth: { name: "Growth Hacker", color: "#f59e0b", emoji: "\u{1F4C8}" },
-  user: { name: "You", color: "#4ade80", emoji: "\u{1F464}" },
+  conductor: { name: "指挥官", color: "#00d4ff", emoji: "\u{1F3AF}" },
+  researcher: { name: "调研员", color: "#a78bfa", emoji: "\u{1F50D}" },
+  pm: { name: "产品经理", color: "#f59e0b", emoji: "\u{1F4CB}" },
+  ux: { name: "UX 设计师", color: "#f59e0b", emoji: "\u{1F3A8}" },
+  backend: { name: "后端架构师", color: "#00d4ff", emoji: "\u2699\uFE0F" },
+  frontend: { name: "前端开发", color: "#00d4ff", emoji: "\u{1F4BB}" },
+  devops: { name: "DevOps 工程师", color: "#00d4ff", emoji: "\u{1F680}" },
+  critic: { name: "质量评审", color: "#00d4ff", emoji: "\u{1F50E}" },
+  growth: { name: "增长专家", color: "#f59e0b", emoji: "\u{1F4C8}" },
+  user: { name: "你", color: "#4ade80", emoji: "\u{1F464}" },
 };
 
-const PHASE_NAMES = ["Discover", "Strategy", "Scaffold", "Build", "Harden", "Launch"];
+const PHASE_NAMES = ["探索", "策略", "搭建", "构建", "加固", "发布"];
 
 const TEMPLATE_ICONS: Record<string, React.ReactNode> = {
   "saas-mvp": <Rocket className="w-6 h-6" />,
@@ -107,7 +107,7 @@ function CopyButton({ text }: { text: string }) {
         setTimeout(() => setCopied(false), 2000);
       }}
       className="p-1 rounded hover:bg-white/10 transition-colors"
-      title="Copy content"
+      title="复制内容"
     >
       {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
     </button>
@@ -147,7 +147,7 @@ function FeedbackButtons({
             ? "bg-emerald-500/20 text-emerald-400"
             : "hover:bg-white/10 text-muted-foreground/50 hover:text-emerald-400"
         }`}
-        title="Satisfied"
+        title="满意"
       >
         <ThumbsUp className="w-3 h-3" />
       </button>
@@ -158,7 +158,7 @@ function FeedbackButtons({
             ? "bg-red-500/20 text-red-400"
             : "hover:bg-white/10 text-muted-foreground/50 hover:text-red-400"
         }`}
-        title="Unsatisfied"
+        title="不满意"
       >
         <ThumbsDown className="w-3 h-3" />
       </button>
@@ -202,7 +202,7 @@ function MeetingMessage({
           <span className="text-xs font-semibold" style={{ color: agent.color }}>{agent.name}</span>
           {msg.messageType && msg.messageType !== "reply" && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-muted-foreground capitalize">
-              {msg.messageType === "brief" ? "Requirements Brief" : msg.messageType}
+              {msg.messageType === "brief" ? "需求简报" : msg.messageType}
             </span>
           )}
           <span className="text-[10px] text-muted-foreground/50">R{msg.round}</span>
@@ -237,7 +237,7 @@ function MeetingMessage({
                 onClick={() => setExpanded(true)}
                 className="text-xs text-prism-cyan hover:underline mt-2"
               >
-                Show full message
+                展开全文
               </button>
             </div>
           )}
@@ -477,11 +477,11 @@ function RequirementBriefReview({
               <ShieldCheck className="w-4 h-4 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold">Review Requirements Brief</h3>
+              <h3 className="text-sm font-semibold">审核需求简报</h3>
               <p className="text-xs text-muted-foreground">
-                Please review the brief below before starting the pipeline.
+                请在启动流水线之前审核以下需求简报。
                 {wasEdited && (
-                  <span className="ml-1 text-amber-400">(Edited by you)</span>
+                  <span className="ml-1 text-amber-400">(已由你编辑)</span>
                 )}
               </p>
             </div>
@@ -491,15 +491,15 @@ function RequirementBriefReview({
               onClick={handleExport}
               disabled={exportQuery.isFetching}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-all disabled:opacity-50"
-              title="Export meeting transcript as Markdown"
-            >
-              {exportQuery.isFetching ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Download className="w-3 h-3" />
-              )}
-              <span className="hidden sm:inline">Export .md</span>
-            </button>
+title="导出会议记录为 Markdown"
+              >
+                {exportQuery.isFetching ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Download className="w-3 h-3" />
+                )}
+                <span className="hidden sm:inline">导出 .md</span>
+              </button>
           </div>
         </div>
       </div>
@@ -511,10 +511,10 @@ function RequirementBriefReview({
           <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-400">Confirmation Required</p>
+              <p className="text-sm font-medium text-amber-400">需要确认</p>
               <p className="text-xs text-muted-foreground mt-1">
-                The PM has generated a Requirements Brief based on the meeting discussion. 
-                Review it carefully — this will be the single source of truth for all 9 agents in the pipeline.
+                产品经理已根据会议讨论生成了需求简报。
+                请仔细审核——这将作为流水线中 9 个智能体的唯一任务依据。
               </p>
             </div>
           </div>
@@ -525,7 +525,7 @@ function RequirementBriefReview({
               <div className="px-4 py-3 border-b border-border/50 bg-amber-500/5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Edit3 className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm font-semibold text-amber-400">Editing Requirements Brief</span>
+                  <span className="text-sm font-semibold text-amber-400">编辑需求简报</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -534,7 +534,7 @@ function RequirementBriefReview({
                     className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
                   >
                     <X className="w-3 h-3" />
-                    Cancel
+                    取消
                   </button>
                   <button
                     onClick={handleSaveEdit}
@@ -546,7 +546,7 @@ function RequirementBriefReview({
                     ) : (
                       <Save className="w-3 h-3" />
                     )}
-                    Save Changes
+                    保存修改
                   </button>
                 </div>
               </div>
@@ -555,7 +555,7 @@ function RequirementBriefReview({
                 value={editedBrief}
                 onChange={e => setEditedBrief(e.target.value)}
                 className="w-full min-h-[400px] p-4 bg-transparent text-foreground/90 text-sm font-mono resize-y focus:outline-none"
-                placeholder="Edit the requirements brief in Markdown format..."
+                placeholder="以 Markdown 格式编辑需求简报..."
                 disabled={isProcessing}
               />
             </div>
@@ -564,9 +564,9 @@ function RequirementBriefReview({
               <div className="px-4 py-3 border-b border-border/50 bg-amber-500/5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm font-semibold">Requirements Brief</span>
+                  <span className="text-sm font-semibold">需求简报</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
-                    Generated by PM
+                    产品经理生成
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -577,7 +577,7 @@ function RequirementBriefReview({
                     className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border/50 text-muted-foreground hover:text-amber-400 hover:border-amber-500/30 transition-all disabled:opacity-50"
                   >
                     <Edit3 className="w-3 h-3" />
-                    Edit
+                    编辑
                   </button>
                 </div>
               </div>
@@ -593,7 +593,7 @@ function RequirementBriefReview({
                   prose-strong:text-foreground
                   prose-a:text-prism-cyan prose-a:no-underline hover:prose-a:underline
                 ">
-                  <Streamdown>{briefText || "*No brief content available.*"}</Streamdown>
+                  <Streamdown>{briefText || "*暂无简报内容*"}</Streamdown>
                 </div>
               </div>
             </div>
@@ -602,12 +602,12 @@ function RequirementBriefReview({
           {/* Error messages */}
           {approveMutation.isError && (
             <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-              Failed to start pipeline: {approveMutation.error?.message || "Unknown error"}
+              启动流水线失败：{approveMutation.error?.message || "未知错误"}
             </div>
           )}
           {returnMutation.isError && (
             <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-              Failed to return to meeting: {returnMutation.error?.message || "Unknown error"}
+              返回会议失败：{returnMutation.error?.message || "未知错误"}
             </div>
           )}
         </div>
@@ -627,7 +627,7 @@ function RequirementBriefReview({
             ) : (
               <RotateCcw className="w-4 h-4" />
             )}
-            Return to Meeting
+            返回会议
           </button>
 
           {/* Right: Approve & Execute */}
@@ -639,7 +639,7 @@ function RequirementBriefReview({
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50"
               >
                 <Edit3 className="w-4 h-4" />
-                Edit Brief
+                编辑简报
               </button>
             )}
             <button
@@ -652,7 +652,7 @@ function RequirementBriefReview({
               ) : (
                 <Zap className="w-4 h-4" />
               )}
-              Approve & Execute
+              确认并执行
             </button>
           </div>
         </div>
@@ -747,11 +747,11 @@ function MeetingView({
               <Users className="w-4 h-4 text-prism-amber" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold">Requirement Meeting</h3>
+              <h3 className="text-sm font-semibold">需求会议</h3>
               <p className="text-xs text-muted-foreground">
                 {messages.length === 0
-                  ? "Agents are analyzing your task..."
-                  : `Round ${task?.meetingRound || 1} — ${agentMessages.length} agent messages`}
+                  ? "智能体正在分析你的任务..."
+                  : `第 ${task?.meetingRound || 1} 轮 — ${agentMessages.length} 条智能体消息`}
               </p>
             </div>
           </div>
@@ -762,14 +762,14 @@ function MeetingView({
                 onClick={handleExport}
                 disabled={exportQuery.isFetching}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-all disabled:opacity-50"
-                title="Export meeting transcript as Markdown"
+                title="导出会议记录为 Markdown"
               >
                 {exportQuery.isFetching ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
                 ) : (
                   <Download className="w-3 h-3" />
                 )}
-                <span className="hidden sm:inline">Export .md</span>
+                <span className="hidden sm:inline">导出 .md</span>
               </button>
             )}
             {/* End Meeting button — generates brief and transitions to confirming */}
@@ -784,7 +784,7 @@ function MeetingView({
                 ) : (
                   <CheckCircle2 className="w-3 h-3" />
                 )}
-                End Meeting
+                结束会议
               </button>
             )}
           </div>
@@ -815,10 +815,10 @@ function MeetingView({
                 })}
               </div>
               <p className="text-sm text-muted-foreground">
-                Conductor, Researcher, and PM are analyzing your task...
+                指挥官、调研员和产品经理正在分析你的任务...
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                This usually takes 15-30 seconds
+                通常需要 15-30 秒
               </p>
             </div>
           </div>
@@ -834,13 +834,13 @@ function MeetingView({
             {replyMutation.isPending && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground pl-12">
                 <Loader2 className="w-4 h-4 animate-spin text-prism-cyan" />
-                Agents are processing your reply...
+                智能体正在处理你的回复...
               </div>
             )}
             {endMeetingMutation.isPending && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground pl-12">
                 <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
-                PM is generating the Requirements Brief...
+                产品经理正在生成需求简报...
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -862,7 +862,7 @@ function MeetingView({
                     replyMutation.mutate({ taskId, message: replyText.trim() });
                   }
                 }}
-                placeholder="Reply to the meeting discussion..."
+                placeholder="回复会议讨论..."
                 className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 text-sm"
                 disabled={isProcessing}
               />
@@ -881,11 +881,11 @@ function MeetingView({
               ) : (
                 <Send className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline">Reply</span>
+              <span className="hidden sm:inline">回复</span>
             </button>
           </div>
           <p className="text-[11px] text-muted-foreground/50 text-center mt-2">
-            Answer the questions above, or click "End Meeting" to generate the Requirements Brief for review.
+            回答以上问题，或点击“结束会议”生成需求简报进行审核。
           </p>
         </div>
       )}
@@ -958,7 +958,7 @@ export default function Workspace() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-prism-cyan/30 border-t-prism-cyan rounded-full animate-spin" />
-          <span className="text-sm text-muted-foreground font-mono">Loading workspace...</span>
+          <span className="text-sm text-muted-foreground font-mono">加载工作区中...</span>
         </div>
       </div>
     );
@@ -969,8 +969,8 @@ export default function Workspace() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-lg font-semibold mb-2">Project not found</h2>
-          <Link href="/dashboard" className="text-prism-cyan hover:underline">Back to Dashboard</Link>
+          <h2 className="text-lg font-semibold mb-2">项目未找到</h2>
+          <Link href="/dashboard" className="text-prism-cyan hover:underline">返回控制台</Link>
         </div>
       </div>
     );
@@ -1009,26 +1009,26 @@ export default function Workspace() {
           <div className="flex items-center gap-3">
             <Link href="/dashboard" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm hidden sm:inline">Dashboard</span>
+              <span className="text-sm hidden sm:inline">控制台</span>
             </Link>
             <ChevronRight className="w-3 h-3 text-border" />
             <span className="font-display font-semibold text-sm truncate max-w-[200px]">{project.name}</span>
             {activeTask?.status === "clarifying" && (
               <span className="flex items-center gap-1 text-xs text-prism-amber">
                 <MessageSquare className="w-3 h-3" />
-                Requirement Meeting
+                需求会议
               </span>
             )}
             {activeTask?.status === "confirming" && (
               <span className="flex items-center gap-1 text-xs text-amber-400">
                 <ShieldCheck className="w-3 h-3" />
-                Reviewing Brief
+                审核简报
               </span>
             )}
             {activeTask?.status === "running" && (
               <span className="flex items-center gap-1 text-xs text-prism-cyan">
                 <span className="w-1.5 h-1.5 rounded-full bg-prism-cyan animate-pulse" />
-                AI Agents Working...
+                智能体工作中...
               </span>
             )}
           </div>
@@ -1040,7 +1040,7 @@ export default function Workspace() {
                   className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all text-muted-foreground hover:text-prism-cyan"
                 >
                   <BarChart3 className="w-3 h-3" />
-                  Monitor
+                  监控
                 </Link>
                 {activeTask?.status === "completed" && (
                   <Link
@@ -1048,8 +1048,8 @@ export default function Workspace() {
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-prism-cyan/10 border border-prism-cyan/30 text-prism-cyan hover:bg-prism-cyan/20 transition-all"
                   >
                     <FileText className="w-3 h-3" />
-                    <span className="hidden sm:inline">View Results</span>
-                    <span className="sm:hidden">Results</span>
+                    <span className="hidden sm:inline">查看结果</span>
+                    <span className="sm:hidden">结果</span>
                   </Link>
                 )}
               </>
@@ -1070,11 +1070,11 @@ export default function Workspace() {
         {/* Left: Task History Sidebar */}
         <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-border/50 bg-card/30">
           <div className="p-3 border-b border-border/50">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tasks</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">任务列表</h3>
           </div>
           <div className="p-2 space-y-1 max-h-[200px] lg:max-h-[calc(100vh-220px)] overflow-y-auto flex lg:flex-col flex-row gap-1 lg:gap-0">
             {tasks.length === 0 ? (
-              <p className="text-xs text-muted-foreground p-3">No tasks yet. Start one below.</p>
+              <p className="text-xs text-muted-foreground p-3">暂无任务。在下方创建一个。</p>
             ) : (
               tasks.map(task => (
                 <button
@@ -1108,7 +1108,7 @@ export default function Workspace() {
           </div>
           {/* Model Selector */}
           <div className="hidden lg:block p-3 border-t border-border/50">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">AI Model</p>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">AI 模型</p>
             <ModelSelector projectId={projectId} />
           </div>
         </div>
@@ -1163,7 +1163,7 @@ export default function Workspace() {
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                       <Loader2 className="w-8 h-8 animate-spin text-prism-cyan mx-auto mb-3" />
-                      <p className="text-sm text-muted-foreground">Initializing agent pipeline...</p>
+                      <p className="text-sm text-muted-foreground">正在初始化智能体流水线...</p>
                     </div>
                   </div>
                 )}
@@ -1175,7 +1175,7 @@ export default function Workspace() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-semibold text-emerald-400">Pipeline Complete</span>
+                      <span className="text-sm font-semibold text-emerald-400">流水线完成</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Link
@@ -1183,21 +1183,21 @@ export default function Workspace() {
                         className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all text-muted-foreground hover:text-prism-cyan"
                       >
                         <BarChart3 className="w-3 h-3" />
-                        Monitor
+                        监控
                       </Link>
                       <Link
                         href={`/results/${activeTaskId}`}
                         className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md bg-prism-cyan text-prism-navy hover:bg-prism-cyan/90 transition-colors"
                       >
                         <Eye className="w-3 h-3" />
-                        View Full Results
+                        查看完整结果
                       </Link>
                     </div>
                   </div>
                   <p className="text-sm text-foreground/80">
                     {(() => {
                       const r = activeTask.result as Record<string, unknown> | null;
-                      return String(r?.summary ?? "Task completed successfully.");
+                      return String(r?.summary ?? "任务已成功完成。");
                     })()}
                   </p>
                 </div>
@@ -1212,9 +1212,9 @@ export default function Workspace() {
                 <div className="w-16 h-16 rounded-2xl bg-prism-cyan/10 flex items-center justify-center mx-auto mb-4">
                   <Sparkles className="w-8 h-8 text-prism-cyan/50" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Ready to collaborate</h3>
+                <h3 className="text-lg font-semibold mb-2">准备开始协作</h3>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Choose a template to get started quickly, or describe your own task below.
+                  选择一个模板快速开始，或在下方描述你的任务。
                 </p>
 
                 {/* Template Cards */}
@@ -1224,10 +1224,10 @@ export default function Workspace() {
                   <div className="mt-4 p-3 rounded-lg bg-prism-cyan/5 border border-prism-cyan/20 text-left">
                     <div className="flex items-center gap-2 mb-1">
                       <CheckCircle2 className="w-3.5 h-3.5 text-prism-cyan" />
-                      <span className="text-xs font-medium text-prism-cyan">Template selected</span>
+                      <span className="text-xs font-medium text-prism-cyan">已选择模板</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      You can edit the prompt below before starting.
+                      你可以在开始之前编辑下方的提示词。
                     </p>
                   </div>
                 )}
@@ -1249,7 +1249,7 @@ export default function Workspace() {
                         handleSubmit();
                       }
                     }}
-                    placeholder="Describe your task... (e.g., Build a social e-commerce platform)"
+                    placeholder="描述你的任务...（例如：构建一个社交电商平台）"
                     className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 text-sm"
                     disabled={createTaskMutation.isPending}
                   />
@@ -1264,7 +1264,7 @@ export default function Workspace() {
                   ) : (
                     <Send className="w-4 h-4" />
                   )}
-                  <span className="hidden sm:inline">Run</span>
+                  <span className="hidden sm:inline">运行</span>
                 </button>
               </div>
               {/* Skip meeting toggle */}
@@ -1282,7 +1282,7 @@ export default function Workspace() {
                   ) : (
                     <Users className="w-3 h-3" />
                   )}
-                  {skipMeeting ? "Fast Mode (skip meeting)" : "Meeting Mode (recommended)"}
+                  {skipMeeting ? "快速模式（跳过会议）" : "会议模式（推荐）"}
                 </button>
               </div>
             </div>

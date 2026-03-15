@@ -24,9 +24,9 @@ const PROVIDER_COLORS: Record<string, string> = {
 };
 
 const TIER_CONFIG = {
-  free: { label: "Free", icon: Zap, className: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
-  standard: { label: "Standard", icon: Sparkles, className: "text-prism-cyan bg-prism-cyan/10 border-prism-cyan/20" },
-  premium: { label: "Premium", icon: Crown, className: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
+  free: { label: "免费", icon: Zap, className: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
+  standard: { label: "标准", icon: Sparkles, className: "text-prism-cyan bg-prism-cyan/10 border-prism-cyan/20" },
+  premium: { label: "高级", icon: Crown, className: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
 };
 
 function formatContextWindow(tokens: number): string {
@@ -93,7 +93,7 @@ export default function ModelSelector({ projectId }: { projectId: number }) {
         <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-card border border-border rounded-xl shadow-2xl shadow-black/40 overflow-hidden max-h-[400px] overflow-y-auto">
           <div className="p-2 border-b border-border/50">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2">
-              Select Model
+              选择模型
             </p>
           </div>
           <div className="p-1.5 space-y-0.5">
@@ -147,7 +147,7 @@ export default function ModelSelector({ projectId }: { projectId: number }) {
                         </span>
                         {/* Context Window */}
                         <span className="text-[9px] text-muted-foreground">
-                          {formatContextWindow(model.contextWindow)} ctx
+                          {formatContextWindow(model.contextWindow)} 上下文
                         </span>
                         {/* Pricing */}
                         <span className="text-[9px] text-muted-foreground">

@@ -18,13 +18,20 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 
+const STATUS_LABELS: Record<string, string> = {
+  idle: "空闲",
+  running: "运行中",
+  completed: "已完成",
+  failed: "失败",
+};
+
 const TEMPLATES = [
-  { id: "saas-mvp", name: "Build SaaS MVP", icon: "🚀", description: "Full-stack SaaS application with auth, billing, and dashboard" },
-  { id: "market-research", name: "Market Research", icon: "📊", description: "Comprehensive market analysis with competitor insights" },
-  { id: "tech-design", name: "Tech Architecture", icon: "🏗️", description: "System design document with diagrams and specifications" },
-  { id: "landing-page", name: "Landing Page", icon: "🎨", description: "High-converting landing page with copy and design" },
-  { id: "api-service", name: "API Service", icon: "⚡", description: "RESTful API with documentation and testing" },
-  { id: "custom", name: "Custom Task", icon: "✨", description: "Describe any task for the agent team" },
+  { id: "saas-mvp", name: "SaaS MVP 开发", icon: "🚀", description: "全栈 SaaS 应用，含认证、计费和管理面板" },
+  { id: "market-research", name: "市场调研", icon: "📊", description: "全面的市场分析，含竞品洞察报告" },
+  { id: "tech-design", name: "技术架构设计", icon: "🏗️", description: "系统设计文档，含架构图和技术规格" },
+  { id: "landing-page", name: "落地页设计", icon: "🎨", description: "高转化率落地页，含文案和视觉设计" },
+  { id: "api-service", name: "API 服务", icon: "⚡", description: "RESTful API 开发，含文档和测试" },
+  { id: "custom", name: "自定义任务", icon: "✨", description: "描述任何任务，交给智能体团队完成" },
 ];
 
 function StatusBadge({ status }: { status: string }) {
@@ -38,7 +45,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs border rounded-full ${c.color}`}>
       {c.icon}
-      {status}
+      {STATUS_LABELS[status] || status}
     </span>
   );
 }
@@ -80,7 +87,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-prism-cyan/30 border-t-prism-cyan rounded-full animate-spin" />
-          <span className="text-sm text-muted-foreground font-mono">Loading...</span>
+          <span className="text-sm text-muted-foreground font-mono">加载中...</span>
         </div>
       </div>
     );
@@ -92,7 +99,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Top Nav */}
+      {/* 顶部导航 */}
       <nav className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -103,12 +110,12 @@ export default function Dashboard() {
             <span className="text-border">|</span>
             <span className="text-muted-foreground text-sm flex items-center gap-1.5">
               <LayoutDashboard className="w-4 h-4" />
-              Dashboard
+              控制台
             </span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">
-              {user?.name || user?.email || "User"}
+              {user?.name || user?.email || "用户"}
             </span>
             <div className="w-8 h-8 rounded-full bg-prism-cyan/20 border border-prism-cyan/30 flex items-center justify-center text-prism-cyan text-sm font-bold">
               {(user?.name || "U")[0].toUpperCase()}
@@ -118,7 +125,7 @@ export default function Dashboard() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
+        {/* 统计卡片 */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="glass-card rounded-xl p-5">
             <div className="flex items-center gap-3">
@@ -127,7 +134,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{projects.length}</p>
-                <p className="text-xs text-muted-foreground">Total Projects</p>
+                <p className="text-xs text-muted-foreground">全部项目</p>
               </div>
             </div>
           </div>
@@ -138,7 +145,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{runningCount}</p>
-                <p className="text-xs text-muted-foreground">Running</p>
+                <p className="text-xs text-muted-foreground">运行中</p>
               </div>
             </div>
           </div>
@@ -149,34 +156,34 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{completedCount}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-xs text-muted-foreground">已完成</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Header + Create Button */}
+        {/* 标题 + 创建按钮 */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-display font-bold">Your Projects</h2>
+          <h2 className="text-xl font-display font-bold">我的项目</h2>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 px-4 py-2 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:bg-prism-cyan/90 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            New Project
+            新建项目
           </button>
         </div>
 
-        {/* Create Project Modal */}
+        {/* 创建项目弹窗 */}
         {showCreate && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
             <div className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="p-6 border-b border-border">
-                <h3 className="text-lg font-display font-bold">Create New Project</h3>
-                <p className="text-sm text-muted-foreground mt-1">Choose a template or describe a custom task</p>
+                <h3 className="text-lg font-display font-bold">创建新项目</h3>
+                <p className="text-sm text-muted-foreground mt-1">选择一个模板快速开始，或描述自定义任务</p>
               </div>
 
-              {/* Templates Grid */}
+              {/* 模板网格 */}
               <div className="p-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {TEMPLATES.map(t => (
                   <button
@@ -198,23 +205,23 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              {/* Form */}
+              {/* 表单 */}
               <div className="p-6 border-t border-border space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Project Name</label>
+                  <label className="text-sm font-medium text-muted-foreground">项目名称</label>
                   <input
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
-                    placeholder="My PRISM Project"
+                    placeholder="我的 PRISM 项目"
                     className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Description (optional)</label>
+                  <label className="text-sm font-medium text-muted-foreground">项目描述（可选）</label>
                   <textarea
                     value={newDesc}
                     onChange={e => setNewDesc(e.target.value)}
-                    placeholder="Describe what you want to build..."
+                    placeholder="描述你想要构建的产品..."
                     rows={3}
                     className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 resize-none"
                   />
@@ -224,7 +231,7 @@ export default function Dashboard() {
                     onClick={() => setShowCreate(false)}
                     className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Cancel
+                    取消
                   </button>
                   <button
                     onClick={() => {
@@ -239,7 +246,7 @@ export default function Dashboard() {
                     className="flex items-center gap-2 px-5 py-2 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:bg-prism-cyan/90 transition-colors disabled:opacity-50"
                   >
                     {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    Create & Start
+                    创建并开始
                   </button>
                 </div>
               </div>
@@ -247,7 +254,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Projects List */}
+        {/* 项目列表 */}
         {projectsQuery.isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-prism-cyan" />
@@ -257,14 +264,14 @@ export default function Dashboard() {
             <div className="w-16 h-16 rounded-2xl bg-prism-cyan/10 flex items-center justify-center mx-auto mb-4">
               <FolderOpen className="w-8 h-8 text-prism-cyan/50" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
-            <p className="text-muted-foreground text-sm mb-6">Create your first project to experience multi-agent collaboration</p>
+            <h3 className="text-lg font-semibold mb-2">暂无项目</h3>
+            <p className="text-muted-foreground text-sm mb-6">创建你的第一个项目，体验多智能体协作</p>
             <button
               onClick={() => setShowCreate(true)}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:bg-prism-cyan/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Create Project
+              创建项目
             </button>
           </div>
         ) : (
@@ -288,7 +295,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
                   <span className="text-xs text-muted-foreground">
-                    {new Date(project.updatedAt).toLocaleDateString()}
+                    {new Date(project.updatedAt).toLocaleDateString("zh-CN")}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -297,19 +304,19 @@ export default function Dashboard() {
                         navigate(`/workspace/${project.id}`);
                       }}
                       className="p-1.5 rounded-md hover:bg-prism-cyan/10 text-muted-foreground hover:text-prism-cyan transition-colors"
-                      title="Open Workspace"
+                      title="打开工作台"
                     >
                       <Play className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm("Delete this project?")) {
+                        if (confirm("确定要删除这个项目吗？")) {
                           deleteMutation.mutate({ id: project.id });
                         }
                       }}
                       className="p-1.5 rounded-md hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
-                      title="Delete"
+                      title="删除"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
