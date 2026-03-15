@@ -674,6 +674,9 @@ function MeetingView({
 }) {
   const [replyText, setReplyText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
+  const userScrolledUpRef = useRef(false);
 
   const meetingQuery = trpc.task.meetingMessages.useQuery(
     { taskId },
@@ -717,9 +720,30 @@ function MeetingView({
     return map;
   }, [feedbacks]);
 
-  // Auto-scroll
+  // Track if user has scrolled up from bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Consider "near bottom" if within 100px of the bottom
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      userScrolledUpRef.current = !isNearBottom;
+    };
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Auto-scroll only when new messages arrive AND user is at the bottom
+  useEffect(() => {
+    const newCount = messages.length;
+    const hadNewMessages = newCount > prevMessageCountRef.current;
+    prevMessageCountRef.current = newCount;
+
+    // Only auto-scroll if there are genuinely new messages and user hasn't scrolled up
+    if (hadNewMessages && !userScrolledUpRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const handleExport = async () => {
@@ -792,7 +816,7 @@ function MeetingView({
       </div>
 
       {/* Meeting Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -905,6 +929,9 @@ export default function Workspace() {
   const [skipMeeting, setSkipMeeting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const logsContainerRef = useRef<HTMLDivElement>(null);
+  const prevLogsCountRef = useRef(0);
+  const userScrolledUpLogsRef = useRef(false);
 
   const projectQuery = trpc.project.get.useQuery({ id: projectId }, { enabled: isAuthenticated && projectId > 0 });
   const tasksQuery = trpc.task.list.useQuery({ projectId }, { enabled: isAuthenticated && projectId > 0 });
@@ -936,9 +963,27 @@ export default function Workspace() {
     }
   }, [tasksQuery.data, activeTaskId]);
 
-  // Auto-scroll logs
+  // Track if user has scrolled up in logs view
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = logsContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      userScrolledUpLogsRef.current = !isNearBottom;
+    };
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Auto-scroll logs only when new entries arrive AND user is at the bottom
+  useEffect(() => {
+    const newCount = logsQuery.data?.length ?? 0;
+    const hadNewLogs = newCount > prevLogsCountRef.current;
+    prevLogsCountRef.current = newCount;
+    if (hadNewLogs && !userScrolledUpLogsRef.current) {
+      logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [logsQuery.data]);
 
   // Refetch tasks while any is active
@@ -1137,7 +1182,7 @@ export default function Workspace() {
           {/* Pipeline View */}
           {activeTaskId && isPipelinePhase && (
             <>
-              <div className="flex-1 overflow-y-auto p-4 space-y-1">
+              <div ref={logsContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
                 {logs.length > 0 ? (
                   <>
                     {logs.map((log: any, i: number) => {
