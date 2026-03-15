@@ -3,8 +3,7 @@
  * Full-bleed hero with constellation background, asymmetric layout
  */
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, GitBranch, Zap } from "lucide-react";
-import { Link } from "wouter";
+import { Sparkles } from "lucide-react";
 import { useI18n } from "@/contexts/I18nContext";
 import { RichText } from "@/components/RichText";
 
@@ -66,28 +65,7 @@ export default function HeroSection() {
               />
             </p>
 
-            {/* CTA buttons */}
-            <div className="flex flex-wrap gap-4 pt-2">
-              <a
-                href="https://github.com/prism-agentic/prism"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex items-center gap-2 px-6 py-3 bg-prism-cyan text-prism-navy font-semibold rounded-lg hover:shadow-[0_0_30px_oklch(0.78_0.15_200/0.4)] transition-all duration-300"
-              >
-                <GitBranch className="w-4 h-4" />
-                {t("hero.cta.clone")}
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </a>
-              <Link
-                href="/dashboard"
-                className="group inline-flex items-center gap-2 px-6 py-3 bg-prism-amber text-prism-navy font-semibold rounded-lg hover:shadow-[0_0_30px_oklch(0.78_0.15_80/0.4)] transition-all duration-300"
-              >
-                <Zap className="w-4 h-4" />
-                {t("hero.cta.tryNow")}
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
 
-            </div>
 
             {/* Stats */}
             <div className="flex gap-8 pt-4">

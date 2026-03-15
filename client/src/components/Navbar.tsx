@@ -4,7 +4,8 @@
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Github, BookOpen, Globe } from "lucide-react";
+import { Menu, X, Github, BookOpen, Globe, Zap } from "lucide-react";
+import { Link } from "wouter";
 import { useI18n } from "@/contexts/I18nContext";
 
 const NAV_KEYS = [
@@ -79,6 +80,13 @@ export default function Navbar() {
               <BookOpen className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
               {t("nav.docs")}
             </a>
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 text-sm font-semibold bg-prism-amber text-prism-navy rounded-lg hover:shadow-[0_0_20px_oklch(0.78_0.15_80/0.4)] transition-all"
+            >
+              <Zap className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+              {t("hero.cta.tryNow")}
+            </Link>
           </div>
 
           {/* Mobile toggle */}
@@ -131,6 +139,13 @@ export default function Navbar() {
                 >
                   {t("nav.docs")}
                 </a>
+                <Link
+                  href="/dashboard"
+                  className="px-4 py-2 text-sm font-semibold bg-prism-amber text-prism-navy rounded-lg"
+                >
+                  <Zap className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+                  {t("hero.cta.tryNow")}
+                </Link>
               </div>
             </motion.div>
           )}

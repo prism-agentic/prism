@@ -165,4 +165,10 @@
 ## Bugfix — 智能体输出英文问题
 - [x] 将 requirementMeeting.ts 中所有智能体 system prompt 改为中文
 - [x] 将 agentSimulator.ts 中所有智能体 system prompt 改为中文（83 个测试全部通过）
+- [x] 保存 checkpoint
+
+## UI 优化 — Hero 按钮精简 + 导航栏 CTA
+- [x] 删除 Hero 区域的“克隆仓库”按钮
+- [x] 删除 Hero 区域的“立即体验”按钮
+- [x] 在导航栏右侧添加“立即体验”CTA 按钮（醒目样式）
 - [ ] 保存 checkpoint
