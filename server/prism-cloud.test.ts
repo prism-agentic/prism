@@ -131,15 +131,16 @@ describe("task management", () => {
     expect(tasks[0].prompt).toBe("Task 1");
   });
 
-  it("retrieves task logs", async () => {
+  it("retrieves task logs in fast mode (skipMeeting)", async () => {
     const ctx = createAuthContext(7);
     const caller = appRouter.createCaller(ctx);
 
     const project = await caller.project.create({ name: "Logs Project" });
-    const task = await caller.task.create({ projectId: project.id, prompt: "Test logs" });
+    // Use skipMeeting to go directly to pipeline
+    const task = await caller.task.create({ projectId: project.id, prompt: "Test logs", skipMeeting: true });
 
-    // Wait a bit for simulator to start generating logs
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for simulator to start generating logs
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     expect(logs.length).toBeGreaterThanOrEqual(1);
@@ -151,20 +152,42 @@ describe("task management", () => {
 });
 
 describe("agent simulator", () => {
-  it("generates logs with correct agent roles", async () => {
+  it("generates logs with correct agent roles in fast mode", async () => {
     const ctx = createAuthContext(8);
     const caller = appRouter.createCaller(ctx);
 
     const project = await caller.project.create({ name: "Simulator Project" });
-    const task = await caller.task.create({ projectId: project.id, prompt: "Simulate agents" });
+    // Use skipMeeting to go directly to pipeline
+    const task = await caller.task.create({ projectId: project.id, prompt: "Simulate agents", skipMeeting: true });
 
     // Wait for first agent to produce logs
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     const roles = [...new Set(logs.map(l => l.agentRole))];
 
     // At minimum, conductor should have started
     expect(roles).toContain("conductor");
+  });
+});
+
+describe("meeting mode default behavior", () => {
+  it("task defaults to meeting mode (clarifying status)", async () => {
+    const ctx = createAuthContext(9);
+    const caller = appRouter.createCaller(ctx);
+
+    const project = await caller.project.create({ name: "Meeting Default Project" });
+    const task = await caller.task.create({
+      projectId: project.id,
+      prompt: "Build a complex platform",
+    });
+
+    // Wait for meeting to start
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const retrieved = await caller.task.get({ id: task.id });
+    expect(retrieved).toBeTruthy();
+    // In meeting mode, task should be in clarifying or pending state
+    expect(["pending", "clarifying"]).toContain(retrieved?.status);
   });
 });

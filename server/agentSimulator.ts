@@ -195,7 +195,7 @@ async function callAgent(
   if (previousContext.trim()) {
     userMessage += `\n\n## Context from Previous Agents\n${previousContext}`;
   }
-  userMessage += `\n\nPlease provide your analysis and deliverables based on the above. Be concise but thorough. Respond in the same language as the user's task description.`;
+  userMessage += `\n\nPlease provide your analysis and deliverables based on the above. Be concise but thorough. Respond in the same language as the user's task description. If a Requirements Brief is provided in the context, treat it as the authoritative source of truth for project requirements.`;
 
   messages.push({ role: "user", content: userMessage });
 
@@ -228,9 +228,14 @@ async function callAgent(
 }
 
 // ─── Main Pipeline Executor ──────────────────────────────────────────
-export async function simulateAgentPipeline(taskId: number, prompt: string) {
+export async function simulateAgentPipeline(taskId: number, prompt: string, requirementsBrief?: string) {
   // Accumulates outputs from all agents for context passing
   const agentOutputs: Record<string, string> = {};
+
+  // If we have a requirements brief from the meeting, inject it as pre-existing context
+  if (requirementsBrief) {
+    agentOutputs["requirements_brief"] = requirementsBrief;
+  }
 
   try {
     // Mark task as running
@@ -338,12 +343,12 @@ function getActionLabel(role: string, phase: number): string {
 function buildContext(outputs: Record<string, string>, currentRole: string): string {
   // Define what context each agent receives
   const contextMap: Record<string, string[]> = {
-    conductor: [],                                        // First agent, no context
-    researcher: ["conductor"],                            // Sees task breakdown
-    pm:       ["conductor", "researcher"],                // Sees breakdown + research
-    ux:       ["pm"],                                     // Sees requirements
-    backend:  ["researcher", "pm", "ux"],                 // Sees research + requirements + UX
-    frontend: ["ux", "backend"],                          // Sees UX + backend API
+    conductor: ["requirements_brief"],                     // Sees requirements brief if available
+    researcher: ["conductor", "requirements_brief"],       // Sees task breakdown + brief
+    pm:       ["conductor", "researcher", "requirements_brief"], // Sees breakdown + research + brief
+    ux:       ["pm", "requirements_brief"],                 // Sees requirements + brief
+    backend:  ["researcher", "pm", "ux", "requirements_brief"], // Sees research + requirements + UX + brief
+    frontend: ["ux", "backend", "requirements_brief"],     // Sees UX + backend API + brief
     devops:   ["backend", "backend_build"],                // Sees architecture
     critic:   ["conductor", "pm", "backend", "frontend", "backend_build", "frontend_build"], // Sees everything
     growth:   ["pm", "critic"],                           // Sees requirements + quality review

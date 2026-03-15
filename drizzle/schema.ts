@@ -38,16 +38,24 @@ export type InsertProject = typeof projects.$inferInsert;
 
 /**
  * Tasks — each project can have multiple tasks (pipeline runs)
+ * 
+ * Status flow:
+ *   pending → clarifying (requirement meeting) → running (pipeline execution) → completed/failed
+ *   pending → running (skip meeting / fast mode) → completed/failed
  */
 export const tasks = mysqlTable("tasks", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
   userId: int("userId").notNull(),
   prompt: text("prompt").notNull(),
-  status: mysqlEnum("status", ["pending", "running", "completed", "failed"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "running", "clarifying", "completed", "failed"]).default("pending").notNull(),
   currentPhase: int("currentPhase").default(0),
   totalPhases: int("totalPhases").default(6),
   result: json("result"),
+  /** Structured requirements brief generated after the meeting concludes */
+  requirementsBrief: json("requirementsBrief"),
+  /** Meeting round counter (0 = not started, 1 = Round 1 done, 2+ = follow-up rounds) */
+  meetingRound: int("meetingRound").default(0),
   startedAt: timestamp("startedAt"),
   completedAt: timestamp("completedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -75,3 +83,23 @@ export const agentLogs = mysqlTable("agent_logs", {
 
 export type AgentLog = typeof agentLogs.$inferSelect;
 export type InsertAgentLog = typeof agentLogs.$inferInsert;
+
+/**
+ * Meeting Messages — records the requirement meeting conversation
+ * between user and agents (Conductor, Researcher, PM)
+ * 
+ * sender: "user" | "conductor" | "researcher" | "pm"
+ */
+export const meetingMessages = mysqlTable("meeting_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: int("taskId").notNull(),
+  sender: varchar("sender", { length: 32 }).notNull(),
+  round: int("round").default(1).notNull(),
+  content: text("content").notNull(),
+  /** For agent messages: what type of analysis this is */
+  messageType: varchar("messageType", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MeetingMessage = typeof meetingMessages.$inferSelect;
+export type InsertMeetingMessage = typeof meetingMessages.$inferInsert;

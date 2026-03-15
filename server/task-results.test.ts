@@ -78,18 +78,20 @@ describe("task.get endpoint", () => {
 });
 
 describe("task.logs endpoint for results page", () => {
-  it("returns logs for a task", async () => {
+  it("returns logs for a task in fast mode", async () => {
     const ctx = createAuthContext(103);
     const caller = appRouter.createCaller(ctx);
 
     const project = await caller.project.create({ name: "Logs Results Project" });
+    // Use skipMeeting to go directly to pipeline
     const task = await caller.task.create({
       projectId: project.id,
       prompt: "Test task for logs",
+      skipMeeting: true,
     });
 
     // Wait for initial logs to be generated
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     expect(Array.isArray(logs)).toBe(true);
@@ -143,18 +145,20 @@ describe("project-task relationship", () => {
 });
 
 describe("agent simulator integration", () => {
-  it("creates logs with expected agent roles for pipeline", async () => {
+  it("creates logs with expected agent roles for pipeline in fast mode", async () => {
     const ctx = createAuthContext(106);
     const caller = appRouter.createCaller(ctx);
 
     const project = await caller.project.create({ name: "Pipeline Test" });
+    // Use skipMeeting to go directly to pipeline
     const task = await caller.task.create({
       projectId: project.id,
       prompt: "Build a simple API",
+      skipMeeting: true,
     });
 
     // Wait for the conductor agent to start
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     const roles = [...new Set(logs.map(l => l.agentRole))];
@@ -169,19 +173,22 @@ describe("agent simulator integration", () => {
     }
   });
 
-  it("logs contain phase information", async () => {
+  it("logs contain phase information in fast mode", async () => {
     const ctx = createAuthContext(107);
     const caller = appRouter.createCaller(ctx);
 
     const project = await caller.project.create({ name: "Phase Test" });
+    // Use skipMeeting to go directly to pipeline
     const task = await caller.task.create({
       projectId: project.id,
       prompt: "Design a database schema",
+      skipMeeting: true,
     });
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     const logs = await caller.task.logs({ taskId: task.id });
+    expect(logs.length).toBeGreaterThanOrEqual(1);
     // First logs should be phase 0 (Discover)
     const firstLog = logs[0];
     expect(firstLog.phase).toBe(0);

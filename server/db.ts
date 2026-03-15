@@ -1,6 +1,9 @@
 import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, projects, tasks, agentLogs, type InsertProject, type InsertTask, type InsertAgentLog } from "../drizzle/schema";
+import {
+  InsertUser, users, projects, tasks, agentLogs, meetingMessages,
+  type InsertProject, type InsertTask, type InsertAgentLog, type InsertMeetingMessage,
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -145,7 +148,10 @@ export async function getTaskById(id: number, userId: number) {
   return result[0];
 }
 
-export async function updateTask(id: number, data: Partial<Pick<InsertTask, 'status' | 'currentPhase' | 'result' | 'startedAt' | 'completedAt'>>) {
+export async function updateTask(
+  id: number,
+  data: Partial<Pick<InsertTask, 'status' | 'currentPhase' | 'result' | 'startedAt' | 'completedAt' | 'requirementsBrief' | 'meetingRound'>>,
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(tasks).set(data).where(eq(tasks.id, id));
@@ -164,4 +170,19 @@ export async function getTaskAgentLogs(taskId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(agentLogs).where(eq(agentLogs.taskId, taskId)).orderBy(agentLogs.createdAt);
+}
+
+// ─── Meeting Message Queries ───
+
+export async function createMeetingMessage(data: InsertMeetingMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(meetingMessages).values(data);
+  return { id: result[0].insertId };
+}
+
+export async function getTaskMeetingMessages(taskId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(meetingMessages).where(eq(meetingMessages.taskId, taskId)).orderBy(meetingMessages.createdAt);
 }

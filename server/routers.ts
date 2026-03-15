@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { simulateAgentPipeline } from "./agentSimulator";
+import { runMeetingRound1, handleUserReply, generateRequirementsBrief } from "./requirementMeeting";
 
 export const appRouter = router({
   system: systemRouter,
@@ -76,10 +77,16 @@ export const appRouter = router({
         return db.getTaskById(input.id, ctx.user.id);
       }),
 
+    /**
+     * Create a new task.
+     * skipMeeting = false (default): starts with requirement meeting (Conductor → Researcher → PM)
+     * skipMeeting = true: skips meeting, goes directly to pipeline execution
+     */
     create: protectedProcedure
       .input(z.object({
         projectId: z.number(),
         prompt: z.string().min(1),
+        skipMeeting: z.boolean().optional().default(false),
       }))
       .mutation(async ({ ctx, input }) => {
         const task = await db.createTask({
@@ -89,10 +96,68 @@ export const appRouter = router({
           status: "pending",
           currentPhase: 0,
           totalPhases: 6,
+          meetingRound: 0,
         });
-        // Start agent simulation in background
-        simulateAgentPipeline(task.id, input.prompt).catch(console.error);
+
+        if (input.skipMeeting) {
+          // Fast mode: skip meeting, go directly to pipeline
+          simulateAgentPipeline(task.id, input.prompt).catch(console.error);
+        } else {
+          // Normal mode: start requirement meeting
+          runMeetingRound1(task.id, input.prompt).catch(console.error);
+        }
+
         return task;
+      }),
+
+    /**
+     * User replies in the requirement meeting.
+     * Triggers intelligent routing: Conductor classifies → dispatch to right agent(s).
+     */
+    reply: protectedProcedure
+      .input(z.object({
+        taskId: z.number(),
+        message: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify task belongs to user and is in clarifying state
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        if (task.status !== "clarifying") throw new Error("Task is not in meeting phase");
+
+        const result = await handleUserReply(input.taskId, task.prompt, input.message);
+        return result;
+      }),
+
+    /**
+     * User confirms the meeting is done.
+     * PM generates Requirements Brief, then pipeline execution begins.
+     */
+    confirmMeeting: protectedProcedure
+      .input(z.object({
+        taskId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        if (task.status !== "clarifying") throw new Error("Task is not in meeting phase");
+
+        // Generate requirements brief
+        const brief = await generateRequirementsBrief(input.taskId, task.prompt);
+
+        // Start pipeline execution with the enriched context
+        simulateAgentPipeline(input.taskId, task.prompt, brief).catch(console.error);
+
+        return { success: true, brief };
+      }),
+
+    /**
+     * Get meeting messages for a task (the requirement meeting conversation).
+     */
+    meetingMessages: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getTaskMeetingMessages(input.taskId);
       }),
 
     logs: protectedProcedure

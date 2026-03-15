@@ -23,12 +23,18 @@ import {
   FileText,
   BarChart3,
   Eye,
+  MessageSquare,
+  Zap,
+  Users,
+  SkipForward,
+  PlayCircle,
 } from "lucide-react";
 
-// Agent definitions
+// ─── Agent Definitions ──────────────────────────────────────────────
+
 const AGENTS: Record<string, { name: string; color: string; emoji: string }> = {
   conductor: { name: "Conductor", color: "#00d4ff", emoji: "\u{1F3AF}" },
-  researcher: { name: "Researcher", color: "#00d4ff", emoji: "\u{1F50D}" },
+  researcher: { name: "Researcher", color: "#a78bfa", emoji: "\u{1F50D}" },
   pm: { name: "Product Manager", color: "#f59e0b", emoji: "\u{1F4CB}" },
   ux: { name: "UX Designer", color: "#f59e0b", emoji: "\u{1F3A8}" },
   backend: { name: "Backend Architect", color: "#00d4ff", emoji: "\u2699\uFE0F" },
@@ -36,9 +42,12 @@ const AGENTS: Record<string, { name: string; color: string; emoji: string }> = {
   devops: { name: "DevOps Engineer", color: "#00d4ff", emoji: "\u{1F680}" },
   critic: { name: "Quality Critic", color: "#00d4ff", emoji: "\u{1F50E}" },
   growth: { name: "Growth Hacker", color: "#f59e0b", emoji: "\u{1F4C8}" },
+  user: { name: "You", color: "#4ade80", emoji: "\u{1F464}" },
 };
 
 const PHASE_NAMES = ["Discover", "Strategy", "Scaffold", "Build", "Harden", "Launch"];
+
+// ─── Shared Components ──────────────────────────────────────────────
 
 function PhaseIndicator({ currentPhase, totalPhases, status }: { currentPhase: number; totalPhases: number; status: string }) {
   return (
@@ -87,13 +96,95 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+// ─── Meeting Message Component ──────────────────────────────────────
+
+function MeetingMessage({ msg }: { msg: { id: number; sender: string; round: number; content: string; messageType: string | null; createdAt: Date } }) {
+  const agent = AGENTS[msg.sender] || { name: msg.sender, color: "#888", emoji: "\u{1F916}" };
+  const isUser = msg.sender === "user";
+  const isBrief = msg.messageType === "brief";
+  const [expanded, setExpanded] = useState(isBrief || msg.content.length < 500);
+
+  return (
+    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+      {/* Avatar */}
+      <div className="flex-shrink-0">
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center text-base shadow-lg"
+          style={{
+            background: `linear-gradient(135deg, ${agent.color}30, ${agent.color}10)`,
+            border: `2px solid ${agent.color}50`,
+          }}
+        >
+          {agent.emoji}
+        </div>
+      </div>
+
+      {/* Message Bubble */}
+      <div className={`flex-1 max-w-[85%] ${isUser ? "ml-auto" : ""}`}>
+        {/* Sender label */}
+        <div className={`flex items-center gap-2 mb-1 ${isUser ? "justify-end" : ""}`}>
+          <span className="text-xs font-semibold" style={{ color: agent.color }}>{agent.name}</span>
+          {msg.messageType && msg.messageType !== "reply" && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-muted-foreground capitalize">
+              {msg.messageType === "brief" ? "Requirements Brief" : msg.messageType}
+            </span>
+          )}
+          <span className="text-[10px] text-muted-foreground/50">R{msg.round}</span>
+        </div>
+
+        {/* Content */}
+        <div
+          className={`rounded-2xl px-4 py-3 text-sm ${
+            isUser
+              ? "bg-prism-cyan/15 border border-prism-cyan/30 text-foreground"
+              : isBrief
+              ? "bg-amber-500/10 border border-amber-500/30 text-foreground"
+              : "bg-card/80 border border-border/50 text-foreground/90"
+          }`}
+        >
+          {expanded ? (
+            <div className="prose prose-invert prose-sm max-w-none
+              prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2
+              prose-p:text-foreground/80 prose-p:leading-relaxed
+              prose-li:text-foreground/80
+              prose-code:text-prism-cyan prose-code:bg-prism-cyan/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+              prose-pre:bg-[#0a1628] prose-pre:border prose-pre:border-border/30 prose-pre:rounded-lg
+              prose-strong:text-foreground
+              prose-a:text-prism-cyan prose-a:no-underline hover:prose-a:underline
+            ">
+              <Streamdown>{msg.content}</Streamdown>
+            </div>
+          ) : (
+            <div>
+              <p className="text-foreground/80 line-clamp-4">{msg.content.substring(0, 300)}...</p>
+              <button
+                onClick={() => setExpanded(true)}
+                className="text-xs text-prism-cyan hover:underline mt-2"
+              >
+                Show full message
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Copy button for agent messages */}
+        {!isUser && (
+          <div className="flex items-center gap-1 mt-1">
+            <CopyButton text={msg.content} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Agent Log Entry (Pipeline View) ────────────────────────────────
+
 function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
   const agent = AGENTS[log.agentRole] || { name: log.agentName, color: "#888", emoji: "\u{1F916}" };
   const [expanded, setExpanded] = useState(false);
   const isDone = log.status === "done";
   const hasLongContent = isDone && log.content && log.content.length > 200;
-
-  // Auto-expand the latest "done" log, or if it's still working
   const shouldAutoExpand = isLatest && (log.status === "working" || log.status === "done");
 
   const statusMap: Record<string, React.ReactNode> = {
@@ -104,12 +195,10 @@ function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
     error: <AlertCircle className="w-3.5 h-3.5 text-red-400" />,
   };
   const statusIcon = statusMap[log.status as string] || <Clock className="w-3.5 h-3.5 text-muted-foreground" />;
-
   const isExpanded = expanded || shouldAutoExpand;
 
   return (
     <div className="rounded-lg hover:bg-card/50 transition-colors group border border-transparent hover:border-border/30">
-      {/* Header — always visible */}
       <div
         className={`flex gap-3 py-2.5 px-3 ${hasLongContent ? "cursor-pointer" : ""}`}
         onClick={() => hasLongContent && setExpanded(!expanded)}
@@ -126,9 +215,7 @@ function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold" style={{ color: agent.color }}>{agent.name}</span>
             {statusIcon}
-            <span className="text-xs text-muted-foreground font-mono">
-              {log.action}
-            </span>
+            <span className="text-xs text-muted-foreground font-mono">{log.action}</span>
             <span className="ml-auto flex items-center gap-1">
               {log.durationMs && (
                 <span className="text-[10px] text-muted-foreground/60 font-mono">{(log.durationMs / 1000).toFixed(1)}s</span>
@@ -139,13 +226,9 @@ function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
               {isDone && log.content && <CopyButton text={log.content} />}
             </span>
           </div>
-
-          {/* Short preview when collapsed */}
           {isDone && log.content && !isExpanded && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{log.content.substring(0, 150)}...</p>
           )}
-
-          {/* Working status message */}
           {log.status === "working" && log.content && (
             <p className="text-xs text-prism-amber/70 mt-1 flex items-center gap-1">
               <Activity className="w-3 h-3 animate-pulse" />
@@ -154,8 +237,6 @@ function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
           )}
         </div>
       </div>
-
-      {/* Expanded content — Markdown rendered */}
       {isDone && log.content && isExpanded && (
         <div className="px-3 pb-3 pl-[52px]">
           <div className="rounded-lg bg-background/50 border border-border/30 p-4 text-sm prose prose-invert prose-sm max-w-none
@@ -175,6 +256,206 @@ function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
   );
 }
 
+// ─── Meeting View Component ─────────────────────────────────────────
+
+function MeetingView({
+  taskId,
+  task,
+  onConfirm,
+}: {
+  taskId: number;
+  task: any;
+  onConfirm: () => void;
+}) {
+  const [replyText, setReplyText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const meetingQuery = trpc.task.meetingMessages.useQuery(
+    { taskId },
+    { refetchInterval: 2000 }
+  );
+
+  const replyMutation = trpc.task.reply.useMutation({
+    onSuccess: () => {
+      setReplyText("");
+      meetingQuery.refetch();
+    },
+  });
+
+  const confirmMutation = trpc.task.confirmMeeting.useMutation({
+    onSuccess: () => {
+      onConfirm();
+    },
+  });
+
+  const messages = meetingQuery.data || [];
+  const agentMessages = messages.filter(m => m.sender !== "user");
+  const isWaitingForAgents = agentMessages.length === 0 || replyMutation.isPending;
+  const hasBrief = messages.some(m => m.messageType === "brief");
+  const isProcessing = replyMutation.isPending || confirmMutation.isPending;
+
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  return (
+    <div className="flex-1 flex flex-col">
+      {/* Meeting Header */}
+      <div className="px-4 py-3 border-b border-border/50 bg-card/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-prism-amber/15 border border-prism-amber/30 flex items-center justify-center">
+              <Users className="w-4 h-4 text-prism-amber" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Requirement Meeting</h3>
+              <p className="text-xs text-muted-foreground">
+                {messages.length === 0
+                  ? "Agents are analyzing your task..."
+                  : hasBrief
+                  ? "Requirements Brief generated. Ready to execute."
+                  : `Round ${task.meetingRound || 1} — ${agentMessages.length} agent messages`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!hasBrief && messages.length > 0 && (
+              <button
+                onClick={() => confirmMutation.mutate({ taskId })}
+                disabled={isProcessing}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-all disabled:opacity-50"
+              >
+                {confirmMutation.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <PlayCircle className="w-3 h-3" />
+                )}
+                Start Execution
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Meeting Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                {["conductor", "researcher", "pm"].map(role => {
+                  const a = AGENTS[role];
+                  return (
+                    <div
+                      key={role}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-lg animate-pulse"
+                      style={{
+                        background: `linear-gradient(135deg, ${a.color}30, ${a.color}10)`,
+                        border: `2px solid ${a.color}40`,
+                        animationDelay: `${["conductor", "researcher", "pm"].indexOf(role) * 0.3}s`,
+                      }}
+                    >
+                      {a.emoji}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Conductor, Researcher, and PM are analyzing your task...
+              </p>
+              <p className="text-xs text-muted-foreground/60 mt-1">
+                This usually takes 15-30 seconds
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {messages.map(msg => (
+              <MeetingMessage key={msg.id} msg={msg as any} />
+            ))}
+            {replyMutation.isPending && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pl-12">
+                <Loader2 className="w-4 h-4 animate-spin text-prism-cyan" />
+                Agents are processing your reply...
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Reply Input — only show during clarifying, not after brief */}
+      {!hasBrief && messages.length > 0 && (
+        <div className="border-t border-border/50 p-4 bg-card/30">
+          <div className="flex gap-3 max-w-4xl mx-auto">
+            <div className="flex-1 relative">
+              <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && replyText.trim() && !isProcessing) {
+                    replyMutation.mutate({ taskId, message: replyText.trim() });
+                  }
+                }}
+                placeholder="Reply to the meeting discussion..."
+                className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 text-sm"
+                disabled={isProcessing}
+              />
+            </div>
+            <button
+              onClick={() => {
+                if (replyText.trim() && !isProcessing) {
+                  replyMutation.mutate({ taskId, message: replyText.trim() });
+                }
+              }}
+              disabled={!replyText.trim() || isProcessing}
+              className="px-4 py-3 bg-prism-cyan/15 border border-prism-cyan/30 text-prism-cyan font-medium rounded-xl hover:bg-prism-cyan/25 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {replyMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">Reply</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground/50 text-center mt-2">
+            Answer the questions above, or click "Start Execution" to proceed with the agents' best judgment.
+          </p>
+        </div>
+      )}
+
+      {/* After brief generated — show proceed button */}
+      {hasBrief && task.status === "clarifying" && (
+        <div className="border-t border-border/50 p-4 bg-emerald-500/5">
+          <div className="flex items-center justify-between max-w-4xl mx-auto">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span className="text-sm text-emerald-400 font-medium">Requirements Brief ready</span>
+            </div>
+            <button
+              onClick={() => confirmMutation.mutate({ taskId })}
+              disabled={confirmMutation.isPending}
+              className="flex items-center gap-2 px-5 py-2.5 bg-prism-cyan text-prism-navy font-semibold rounded-xl hover:bg-prism-cyan/90 transition-colors disabled:opacity-50"
+            >
+              {confirmMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Zap className="w-4 h-4" />
+              )}
+              Start Pipeline Execution
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Workspace Component ───────────────────────────────────────
+
 export default function Workspace() {
   const params = useParams<{ id: string }>();
   const projectId = parseInt(params.id || "0");
@@ -182,6 +463,7 @@ export default function Workspace() {
   const [, navigate] = useLocation();
   const [prompt, setPrompt] = useState("");
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
+  const [skipMeeting, setSkipMeeting] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   const projectQuery = trpc.project.get.useQuery({ id: projectId }, { enabled: isAuthenticated && projectId > 0 });
@@ -203,11 +485,11 @@ export default function Workspace() {
     },
   });
 
-  // Auto-select latest running task
+  // Auto-select latest running/clarifying task
   useEffect(() => {
     if (!activeTaskId && tasksQuery.data?.length) {
-      const running = tasksQuery.data.find(t => t.status === "running");
-      setActiveTaskId(running?.id || tasksQuery.data[0].id);
+      const active = tasksQuery.data.find(t => t.status === "running" || t.status === "clarifying");
+      setActiveTaskId(active?.id || tasksQuery.data[0].id);
     }
   }, [tasksQuery.data, activeTaskId]);
 
@@ -216,9 +498,9 @@ export default function Workspace() {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logsQuery.data]);
 
-  // Refetch tasks while any is running
+  // Refetch tasks while any is active
   useEffect(() => {
-    if (!tasksQuery.data?.some(t => t.status === "running" || t.status === "pending")) return;
+    if (!tasksQuery.data?.some(t => ["running", "pending", "clarifying"].includes(t.status))) return;
     const interval = setInterval(() => tasksQuery.refetch(), 3000);
     return () => clearInterval(interval);
   }, [tasksQuery.data]);
@@ -251,11 +533,13 @@ export default function Workspace() {
     );
   }
 
-  const logs: Array<{ id: number; taskId: number; agentName: string; agentRole: string; phase: number | null; action: string | null; content: string | null; status: string; durationMs: number | null; createdAt: Date }> = (logsQuery.data || []) as any;
+  const logs: Array<any> = (logsQuery.data || []) as any;
   const tasks = tasksQuery.data || [];
-
-  // Find the latest "done" log for auto-expand
   const latestDoneLogId = [...logs].reverse().find(l => l.status === "done")?.id;
+
+  // Determine what view to show for the active task
+  const isMeetingPhase = activeTask?.status === "clarifying" || (activeTask?.status === "pending" && !activeTask?.meetingRound);
+  const isPipelinePhase = activeTask?.status === "running" || activeTask?.status === "completed" || activeTask?.status === "failed";
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -269,6 +553,12 @@ export default function Workspace() {
             </Link>
             <ChevronRight className="w-3 h-3 text-border" />
             <span className="font-display font-semibold text-sm truncate max-w-[200px]">{project.name}</span>
+            {activeTask?.status === "clarifying" && (
+              <span className="flex items-center gap-1 text-xs text-prism-amber">
+                <MessageSquare className="w-3 h-3" />
+                Requirement Meeting
+              </span>
+            )}
             {activeTask?.status === "running" && (
               <span className="flex items-center gap-1 text-xs text-prism-cyan">
                 <span className="w-1.5 h-1.5 rounded-full bg-prism-cyan animate-pulse" />
@@ -298,7 +588,7 @@ export default function Workspace() {
                 )}
               </>
             )}
-            {activeTask && (
+            {activeTask && isPipelinePhase && (
               <PhaseIndicator
                 currentPhase={activeTask.currentPhase || 0}
                 totalPhases={activeTask.totalPhases || 6}
@@ -333,6 +623,8 @@ export default function Workspace() {
                   <div className="flex items-center gap-2">
                     {task.status === "running" ? (
                       <Loader2 className="w-3 h-3 animate-spin text-prism-cyan flex-shrink-0" />
+                    ) : task.status === "clarifying" ? (
+                      <MessageSquare className="w-3 h-3 text-prism-amber flex-shrink-0" />
                     ) : task.status === "completed" ? (
                       <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />
                     ) : task.status === "failed" ? (
@@ -348,127 +640,159 @@ export default function Workspace() {
           </div>
         </div>
 
-        {/* Center: Agent Activity Feed */}
+        {/* Center: Main View Area */}
         <div className="flex-1 flex flex-col">
-          {/* Agent Logs */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-1">
-            {(activeTaskId !== null && logs.length > 0) ? (
-              <>
-                {/* Phase headers interleaved */}
-                {logs.map((log, i) => {
-                  const showPhaseHeader = i === 0 || log.phase !== logs[i - 1]?.phase;
-                  return (
-                    <div key={log.id}>
-                      {showPhaseHeader && log.phase != null && (
-                        <div className="flex items-center gap-2 py-3 mt-2 first:mt-0">
-                          <div className="h-px flex-1 bg-border/50" />
-                          <span className="text-xs font-mono text-prism-cyan/70 uppercase tracking-wider">
-                            Phase {log.phase}: {PHASE_NAMES[log.phase] ?? ""}
-                          </span>
-                          <div className="h-px flex-1 bg-border/50" />
+          {/* Meeting View */}
+          {activeTaskId && isMeetingPhase && (
+            <MeetingView
+              taskId={activeTaskId}
+              task={activeTask}
+              onConfirm={() => tasksQuery.refetch()}
+            />
+          )}
+
+          {/* Pipeline View */}
+          {activeTaskId && isPipelinePhase && (
+            <>
+              <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                {logs.length > 0 ? (
+                  <>
+                    {logs.map((log: any, i: number) => {
+                      const showPhaseHeader = i === 0 || log.phase !== logs[i - 1]?.phase;
+                      return (
+                        <div key={log.id}>
+                          {showPhaseHeader && log.phase != null && (
+                            <div className="flex items-center gap-2 py-3 mt-2 first:mt-0">
+                              <div className="h-px flex-1 bg-border/50" />
+                              <span className="text-xs font-mono text-prism-cyan/70 uppercase tracking-wider">
+                                Phase {log.phase}: {PHASE_NAMES[log.phase] ?? ""}
+                              </span>
+                              <div className="h-px flex-1 bg-border/50" />
+                            </div>
+                          )}
+                          <AgentLogEntry log={log} isLatest={log.id === latestDoneLogId} />
                         </div>
-                      )}
-                      <AgentLogEntry log={log} isLatest={log.id === latestDoneLogId} />
+                      );
+                    })}
+                    <div ref={logsEndRef} />
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-prism-cyan mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">Initializing agent pipeline...</p>
                     </div>
-                  );
-                })}
-                <div ref={logsEndRef} />
-              </>
-            ) : activeTaskId ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-prism-cyan mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Initializing agent pipeline...</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center max-w-md">
-                  <div className="w-16 h-16 rounded-2xl bg-prism-cyan/10 flex items-center justify-center mx-auto mb-4">
-                    <Sparkles className="w-8 h-8 text-prism-cyan/50" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Ready to collaborate</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Describe your task below. 9 specialized AI agents will collaborate through a 6-phase pipeline to deliver results.
+                )}
+              </div>
+
+              {/* Task Result */}
+              {activeTask?.status === "completed" && activeTask.result != null && (
+                <div className="mx-4 mb-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm font-semibold text-emerald-400">Pipeline Complete</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/monitor/${activeTaskId}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all text-muted-foreground hover:text-prism-cyan"
+                      >
+                        <BarChart3 className="w-3 h-3" />
+                        Monitor
+                      </Link>
+                      <Link
+                        href={`/results/${activeTaskId}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md bg-prism-cyan text-prism-navy hover:bg-prism-cyan/90 transition-colors"
+                      >
+                        <Eye className="w-3 h-3" />
+                        View Full Results
+                      </Link>
+                    </div>
+                  </div>
+                  <p className="text-sm text-foreground/80">
+                    {(() => {
+                      const r = activeTask.result as Record<string, unknown> | null;
+                      return String(r?.summary ?? "Task completed successfully.");
+                    })()}
                   </p>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </>
+          )}
 
-          {/* Task Result — Enhanced */}
-          {activeTask?.status === "completed" && activeTask.result != null && (
-            <div className="mx-4 mb-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span className="text-sm font-semibold text-emerald-400">Pipeline Complete</span>
+          {/* Empty State — no active task */}
+          {!activeTaskId && (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center max-w-md">
+                <div className="w-16 h-16 rounded-2xl bg-prism-cyan/10 flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="w-8 h-8 text-prism-cyan/50" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/monitor/${activeTaskId}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all text-muted-foreground hover:text-prism-cyan"
-                  >
-                    <BarChart3 className="w-3 h-3" />
-                    Monitor
-                  </Link>
-                  <Link
-                    href={`/results/${activeTaskId}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md bg-prism-cyan text-prism-navy hover:bg-prism-cyan/90 transition-colors"
-                  >
-                    <Eye className="w-3 h-3" />
-                    View Full Results
-                  </Link>
-                </div>
+                <h3 className="text-lg font-semibold mb-2">Ready to collaborate</h3>
+                <p className="text-sm text-muted-foreground">
+                  Describe your task below. A structured requirement meeting with Conductor, Researcher, and PM will help refine your idea before 9 agents execute.
+                </p>
               </div>
-              <p className="text-sm text-foreground/80">
-                {(() => {
-                  const r = activeTask.result as Record<string, unknown> | null;
-                  return String(r?.summary ?? "Task completed successfully.");
-                })()}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Click "View Full Results" to see all deliverables organized by category, with export options.
-              </p>
             </div>
           )}
 
-          {/* Input Bar */}
-          <div className="border-t border-border/50 p-4 bg-card/30">
-            <div className="flex gap-3 max-w-4xl mx-auto">
-              <div className="flex-1 relative">
-                <Terminal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  value={prompt}
-                  onChange={e => setPrompt(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && prompt.trim() && !createTaskMutation.isPending) {
-                      createTaskMutation.mutate({ projectId, prompt: prompt.trim() });
+          {/* Input Bar — only show when not in meeting phase */}
+          {(!activeTaskId || isPipelinePhase || (!isMeetingPhase && !isPipelinePhase)) && (
+            <div className="border-t border-border/50 p-4 bg-card/30">
+              <div className="flex gap-3 max-w-4xl mx-auto">
+                <div className="flex-1 relative">
+                  <Terminal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    value={prompt}
+                    onChange={e => setPrompt(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && prompt.trim() && !createTaskMutation.isPending) {
+                        createTaskMutation.mutate({ projectId, prompt: prompt.trim(), skipMeeting });
+                      }
+                    }}
+                    placeholder="Describe your task... (e.g., Build a social e-commerce platform)"
+                    className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 text-sm"
+                    disabled={createTaskMutation.isPending}
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (prompt.trim() && !createTaskMutation.isPending) {
+                      createTaskMutation.mutate({ projectId, prompt: prompt.trim(), skipMeeting });
                     }
                   }}
-                  placeholder="Describe your task... (e.g., Build a todo app with React and Node.js)"
-                  className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-prism-cyan/50 text-sm"
-                  disabled={createTaskMutation.isPending}
-                />
+                  disabled={!prompt.trim() || createTaskMutation.isPending}
+                  className="px-5 py-3 bg-prism-cyan text-prism-navy font-semibold rounded-xl hover:bg-prism-cyan/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {createTaskMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">Run</span>
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  if (prompt.trim() && !createTaskMutation.isPending) {
-                    createTaskMutation.mutate({ projectId, prompt: prompt.trim() });
-                  }
-                }}
-                disabled={!prompt.trim() || createTaskMutation.isPending}
-                className="px-5 py-3 bg-prism-cyan text-prism-navy font-semibold rounded-xl hover:bg-prism-cyan/90 transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {createTaskMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-                <span className="hidden sm:inline">Run</span>
-              </button>
+              {/* Skip meeting toggle */}
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <button
+                  onClick={() => setSkipMeeting(!skipMeeting)}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-[11px] rounded-full transition-all ${
+                    skipMeeting
+                      ? "bg-prism-amber/15 border border-prism-amber/30 text-prism-amber"
+                      : "bg-transparent border border-border/50 text-muted-foreground hover:border-border"
+                  }`}
+                >
+                  {skipMeeting ? (
+                    <Zap className="w-3 h-3" />
+                  ) : (
+                    <Users className="w-3 h-3" />
+                  )}
+                  {skipMeeting ? "Fast Mode (skip meeting)" : "Meeting Mode (recommended)"}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

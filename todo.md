@@ -66,4 +66,29 @@
 - [x] 添加任务历史详情查看
 - [x] 优化移动端 Workspace 布局
 - [x] 编写/更新 vitest 测试
-- [ ] 保存 checkpoint
+- [x] 保存 checkpoint
+
+## Phase 9 — 需求澄清交互阶段（Human-in-the-Loop）
+- [ ] 设计需求澄清机制：Conductor + Researcher 先分析 → 生成澄清问题 → 等待用户回答 → 再继续执行
+- [ ] 后端：拆分流水线为"澄清阶段"和"执行阶段"，支持暂停/恢复
+- [ ] 后端：新增 task.clarify mutation 接收用户回答
+- [ ] 后端：Conductor 智能体生成结构化澄清问题（目标用户、核心功能、技术偏好等）
+- [ ] 前端：Workspace 中显示澄清问题卡片，用户可逐项回答
+- [ ] 前端：支持用户跳过澄清直接执行（快速模式）
+- [ ] 更新后续智能体 prompt，注入用户澄清后的完整上下文
+- [x] 编写/更新 vitest 测试（31 个测试全部通过）
+- [x] 保存 checkpoint
+
+## Phase 9 — 结构化需求会议 + 智能路由（Human-in-the-Loop v2）
+- [x] 数据库：tasks 表增加 clarifying 状态、meetingRound、requirementsBrief 字段，新增 meetingMessages 表
+- [x] 后端：Round 1 固定分析链（Conductor 分析 → Researcher 竞品调研 → PM 结构化提问）
+- [x] 后端：Round 1 完成后暂停流水线，等待用户回复
+- [x] 后端：Round 2 智能路由（Conductor 分类用户回复 → 分发给对应 Agent 追问）
+- [x] 后端：task.reply mutation 接收用户回复并触发智能路由
+- [x] 后端：task.confirmMeeting mutation 结束会议，PM 生成需求简报
+- [x] 后端：支持用户跳过会议直接执行（快速模式）
+- [x] 前端：Workspace 会议模式 UI（发言人头像、会议记录风格、回复输入框）
+- [x] 前端：跳过/确认/继续讨论按钮 + Meeting/Fast Mode 切换
+- [x] 更新后续 Agent prompt 注入需求简报 + 竞品情报（通过 requirements_brief 上下文链注入）
+- [x] 编写/更新 vitest 测试（31 个测试全部通过）
+- [x] 保存 checkpoint
