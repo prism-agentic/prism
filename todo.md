@@ -135,4 +135,10 @@
 - [x] 前端：ModelSelector 组件（下拉选择器 + 模型信息卡片 + Tier 标签）
 - [x] 前端：Workspace 侧边栏集成模型选择器
 - [x] 编写/更新 vitest 测试（79 个测试全部通过）
+- [x] 保存 checkpoint
+
+## Bugfix — agent_logs.content 列改为 longtext
+- [x] 修改 drizzle/schema.ts 中 agent_logs.content 和 meeting_messages.content 列类型为 longtext
+- [x] 推送数据库迁移
+- [x] 编写 vitest 测试验证（4 个测试通过）
 - [ ] 保存 checkpoint

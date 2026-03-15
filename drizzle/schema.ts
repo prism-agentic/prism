@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, bigint } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, longtext, timestamp, varchar, json, bigint } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -77,7 +77,7 @@ export const agentLogs = mysqlTable("agent_logs", {
   agentRole: varchar("agentRole", { length: 64 }).notNull(),
   phase: int("phase").default(0),
   action: varchar("action", { length: 128 }),
-  content: text("content"),
+  content: longtext("content"),
   status: mysqlEnum("status", ["thinking", "working", "reviewing", "done", "error"]).default("thinking").notNull(),
   durationMs: int("durationMs"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -97,7 +97,7 @@ export const meetingMessages = mysqlTable("meeting_messages", {
   taskId: int("taskId").notNull(),
   sender: varchar("sender", { length: 32 }).notNull(),
   round: int("round").default(1).notNull(),
-  content: text("content").notNull(),
+  content: longtext("content").notNull(),
   /** For agent messages: what type of analysis this is */
   messageType: varchar("messageType", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

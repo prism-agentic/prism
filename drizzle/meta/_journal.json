@@ -43,6 +43,13 @@
       "when": 1773569476300,
       "tag": "0005_odd_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1773570088079,
+      "tag": "0006_flawless_lightspeed",
+      "breakpoints": true
     }
   ]
 }
