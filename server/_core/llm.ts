@@ -209,14 +209,38 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+/**
+ * Resolve the LLM API URL.
+ * Priority: OpenRouter > Built-in Forge
+ */
+const resolveApiUrl = (): string => {
+  if (ENV.openRouterApiKey && ENV.openRouterApiKey.trim().length > 0) {
+    return "https://openrouter.ai/api/v1/chat/completions";
+  }
+  return ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
     : "https://forge.manus.im/v1/chat/completions";
+};
+
+/**
+ * Resolve the API key.
+ * Priority: OpenRouter > Built-in Forge
+ */
+const resolveApiKey = (): string => {
+  if (ENV.openRouterApiKey && ENV.openRouterApiKey.trim().length > 0) {
+    return ENV.openRouterApiKey;
+  }
+  return ENV.forgeApiKey;
+};
+
+const isUsingOpenRouter = (): boolean => {
+  return !!(ENV.openRouterApiKey && ENV.openRouterApiKey.trim().length > 0);
+};
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  const key = resolveApiKey();
+  if (!key) {
+    throw new Error("No LLM API key configured (set OPENROUTER_API_KEY or BUILT_IN_FORGE_API_KEY)");
   }
 };
 
@@ -279,8 +303,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
+  // Use OpenRouter model ID format when using OpenRouter
+  const modelName = isUsingOpenRouter() ? "google/gemini-2.5-flash" : "gemini-2.5-flash";
+
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: modelName,
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,9 +323,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  payload.max_tokens = 32768;
+  // Only set thinking budget for non-OpenRouter backends (OpenRouter handles this differently)
+  if (!isUsingOpenRouter()) {
+    payload.thinking = {
+      "budget_tokens": 128
+    };
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -312,12 +342,24 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
+  const apiUrl = resolveApiUrl();
+  const apiKey = resolveApiKey();
+  const usingOpenRouter = isUsingOpenRouter();
+
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    authorization: `Bearer ${apiKey}`,
+  };
+
+  // OpenRouter recommends these headers for identification
+  if (usingOpenRouter) {
+    headers["HTTP-Referer"] = "https://prismapp-9fcabgkh.manus.space";
+    headers["X-Title"] = "PRISM Multi-Agent Framework";
+  }
+
+  const response = await fetch(apiUrl, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-    },
+    headers,
     body: JSON.stringify(payload),
   });
 

@@ -118,4 +118,10 @@
 - [x] 前端：Approve & Execute / Edit Brief / Return to Meeting 三个操作按钮
 - [x] 前端：需求简报编辑模式（可修改内容后确认）
 - [x] 编写/更新 vitest 测试（62 个测试全部通过）
+- [x] 保存 checkpoint
+
+## Phase 12 — 接入 OpenRouter 大模型后端
+- [x] 将 OpenRouter API Key 存储为环境变量
+- [x] 修改 server/_core/llm.ts，将 LLM 调用切换到 OpenRouter API
+- [x] 编写/更新 vitest 测试验证 OpenRouter 调用（65 个测试全部通过）
 - [ ] 保存 checkpoint
