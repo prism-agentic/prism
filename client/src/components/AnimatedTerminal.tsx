@@ -2,8 +2,10 @@
  * AnimatedTerminal — Typewriter-style terminal animation for Hero section
  * Simulates a PRISM AI Agent building workflow with progressive line reveals
  * Terminal window stays fixed size; content scrolls up as new lines appear.
+ * Supports i18n: content switches between Chinese and English.
  */
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import type { Locale } from "@/contexts/I18nContext";
 
 /* ── Line definitions ── */
 interface TermLine {
@@ -14,40 +16,58 @@ interface TermLine {
   progress?: boolean;   // animated progress bar
 }
 
-const LINES: TermLine[] = [
-  // User input
-  { text: "> 为我的业务构建 AI Agent", color: "text-foreground", typewriter: true, delay: 600 },
-  { text: "", delay: 400 },
-  // Conductor analysis
-  { text: "🎯 指挥官: 分析需求...识别为智能体开发任务", color: "text-prism-cyan", delay: 300, typewriter: true },
-  { text: "🔍 调研员: 调研 AutoGPT, CrewAI, LangGraph...", color: "text-prism-cyan", delay: 400, typewriter: true },
-  { text: "📋 产品经理: 确认核心能力 — 对话 / 决策 / 执行", color: "text-prism-cyan", delay: 400, typewriter: true },
-  { text: "✓ 需求确认完成", color: "text-green-400", delay: 600 },
-  { text: "", delay: 300 },
-  // Pipeline
-  { text: "→ 流水线启动 — 9 个智能体协作中", color: "text-prism-amber", delay: 300 },
-  { text: "  后端架构师: 设计 Agent 运行时...", color: "text-muted-foreground", delay: 350, typewriter: true },
-  { text: "  前端开发者: 构建交互界面...", color: "text-muted-foreground", delay: 350, typewriter: true },
-  { text: "  质量评审员: 验收通过 ✓", color: "text-muted-foreground", delay: 350, typewriter: true },
-  { text: "", delay: 200 },
-  // Progress bar
-  { text: "PROGRESS_BAR", delay: 100, progress: true },
-  { text: "", delay: 400 },
-  // Result
-  { text: "✓ 交付完成 — 你的专属 AI Agent 已就绪", color: "text-green-400", delay: 500 },
-  { text: "→ 进化引擎: 经验已存储，下次更聪明 ↑", color: "text-prism-amber", delay: 600 },
-];
+function getLines(locale: Locale): TermLine[] {
+  if (locale === "en") {
+    return [
+      { text: "> Build an AI Agent for my business", color: "text-foreground", typewriter: true, delay: 600 },
+      { text: "", delay: 400 },
+      { text: "🎯 Conductor: Analyzing request...identified as agent dev task", color: "text-prism-cyan", delay: 300, typewriter: true },
+      { text: "🔍 Researcher: Surveying AutoGPT, CrewAI, LangGraph...", color: "text-prism-cyan", delay: 400, typewriter: true },
+      { text: "📋 PM: Confirmed core capabilities — Chat / Decision / Execution", color: "text-prism-cyan", delay: 400, typewriter: true },
+      { text: "✓ Requirements confirmed", color: "text-green-400", delay: 600 },
+      { text: "", delay: 300 },
+      { text: "→ Pipeline started — 9 agents collaborating", color: "text-prism-amber", delay: 300 },
+      { text: "  Backend Architect: Designing Agent runtime...", color: "text-muted-foreground", delay: 350, typewriter: true },
+      { text: "  Frontend Dev: Building interactive UI...", color: "text-muted-foreground", delay: 350, typewriter: true },
+      { text: "  Quality Critic: Review passed ✓", color: "text-muted-foreground", delay: 350, typewriter: true },
+      { text: "", delay: 200 },
+      { text: "PROGRESS_BAR", delay: 100, progress: true },
+      { text: "", delay: 400 },
+      { text: "✓ Delivered — Your custom AI Agent is ready", color: "text-green-400", delay: 500 },
+      { text: "→ Evolution Engine: Experience stored, smarter next time ↑", color: "text-prism-amber", delay: 600 },
+    ];
+  }
+  return [
+    { text: "> 为我的业务构建 AI Agent", color: "text-foreground", typewriter: true, delay: 600 },
+    { text: "", delay: 400 },
+    { text: "🎯 指挥官: 分析需求...识别为智能体开发任务", color: "text-prism-cyan", delay: 300, typewriter: true },
+    { text: "🔍 调研员: 调研 AutoGPT, CrewAI, LangGraph...", color: "text-prism-cyan", delay: 400, typewriter: true },
+    { text: "📋 产品经理: 确认核心能力 — 对话 / 决策 / 执行", color: "text-prism-cyan", delay: 400, typewriter: true },
+    { text: "✓ 需求确认完成", color: "text-green-400", delay: 600 },
+    { text: "", delay: 300 },
+    { text: "→ 流水线启动 — 9 个智能体协作中", color: "text-prism-amber", delay: 300 },
+    { text: "  后端架构师: 设计 Agent 运行时...", color: "text-muted-foreground", delay: 350, typewriter: true },
+    { text: "  前端开发者: 构建交互界面...", color: "text-muted-foreground", delay: 350, typewriter: true },
+    { text: "  质量评审员: 验收通过 ✓", color: "text-muted-foreground", delay: 350, typewriter: true },
+    { text: "", delay: 200 },
+    { text: "PROGRESS_BAR", delay: 100, progress: true },
+    { text: "", delay: 400 },
+    { text: "✓ 交付完成 — 你的专属 AI Agent 已就绪", color: "text-green-400", delay: 500 },
+    { text: "→ 进化引擎: 经验已存储，下次更聪明 ↑", color: "text-prism-amber", delay: 600 },
+  ];
+}
 
 const TYPE_SPEED = 28;       // ms per character for typewriter
 const RESTART_DELAY = 4000;  // ms before loop restarts
 
 /* ── Progress bar component ── */
-function ProgressBar({ onDone }: { onDone: () => void }) {
+function ProgressBar({ onDone, locale }: { onDone: () => void; locale: Locale }) {
   const [pct, setPct] = useState(0);
   const rafRef = useRef(0);
   const startRef = useRef(0);
   const doneCalled = useRef(false);
   const DURATION = 1800;
+  const label_prefix = locale === "en" ? "  Progress [" : "  进度 [";
 
   useEffect(() => {
     doneCalled.current = false;
@@ -70,11 +90,11 @@ function ProgressBar({ onDone }: { onDone: () => void }) {
 
   const filled = Math.round(pct * 20);
   const bar = "█".repeat(filled) + "░".repeat(20 - filled);
-  const label = `${Math.round(pct * 100)}%`;
+  const pctLabel = `${Math.round(pct * 100)}%`;
 
   return (
     <span className="text-prism-cyan">
-      {"  进度 ["}<span className="text-prism-amber">{bar}</span>{`] ${label}`}
+      {label_prefix}<span className="text-prism-amber">{bar}</span>{`] ${pctLabel}`}
     </span>
   );
 }
@@ -124,18 +144,21 @@ function RenderedLine({
   line,
   isActive,
   onDone,
+  locale,
 }: {
   line: TermLine;
   isActive: boolean;
   onDone: () => void;
+  locale: Locale;
 }) {
+  const label_prefix = locale === "en" ? "  Progress [" : "  进度 [";
   if (line.progress && isActive) {
-    return <ProgressBar onDone={onDone} />;
+    return <ProgressBar onDone={onDone} locale={locale} />;
   }
   if (line.progress && !isActive) {
     return (
       <span className="text-prism-cyan">
-        {"  进度 ["}<span className="text-prism-amber">{"█".repeat(20)}</span>{"] 100%"}
+        {label_prefix}<span className="text-prism-amber">{"█".repeat(20)}</span>{"] 100%"}
       </span>
     );
   }
@@ -153,11 +176,19 @@ function RenderedLine({
 }
 
 /* ── Main component ── */
-export default function AnimatedTerminal() {
+export default function AnimatedTerminal({ locale }: { locale: Locale }) {
+  const lines = useMemo(() => getLines(locale), [locale]);
   const [currentLine, setCurrentLine] = useState(-1);
   const [cycle, setCycle] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Reset animation when locale changes
+  useEffect(() => {
+    clearTimeout(timerRef.current);
+    setCurrentLine(-1);
+    setCycle((c) => c + 1);
+  }, [locale]);
 
   // Auto-scroll to bottom whenever currentLine changes
   useEffect(() => {
@@ -170,37 +201,37 @@ export default function AnimatedTerminal() {
   useEffect(() => {
     timerRef.current = setTimeout(() => {
       setCurrentLine(0);
-    }, LINES[0]?.delay ?? 600);
+    }, lines[0]?.delay ?? 600);
     return () => clearTimeout(timerRef.current);
-  }, [cycle]);
+  }, [cycle, lines]);
 
   const handleLineDone = useCallback((lineIndex: number) => {
     const nextIndex = lineIndex + 1;
-    if (nextIndex >= LINES.length) {
+    if (nextIndex >= lines.length) {
       timerRef.current = setTimeout(() => {
         setCurrentLine(-1);
         setCycle((c) => c + 1);
       }, RESTART_DELAY);
       return;
     }
-    const nextLine = LINES[nextIndex];
+    const nextLine = lines[nextIndex];
     const delay = nextLine?.delay ?? 200;
     timerRef.current = setTimeout(() => {
       setCurrentLine(nextIndex);
     }, delay);
-  }, []);
+  }, [lines]);
 
   // For non-typewriter, non-progress lines, auto-advance when they appear
   useEffect(() => {
-    if (currentLine < 0 || currentLine >= LINES.length) return;
-    const line = LINES[currentLine];
+    if (currentLine < 0 || currentLine >= lines.length) return;
+    const line = lines[currentLine];
     if (!line.typewriter && !line.progress) {
       const timer = setTimeout(() => {
         handleLineDone(currentLine);
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [currentLine, handleLineDone]);
+  }, [currentLine, handleLineDone, lines]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -222,9 +253,9 @@ export default function AnimatedTerminal() {
       <div
         ref={scrollRef}
         className="p-4 font-mono text-sm leading-relaxed h-[320px] overflow-y-auto scrollbar-hide"
-        key={cycle}
+        key={`${locale}-${cycle}`}
       >
-        {LINES.map((line, i) => {
+        {lines.map((line, i) => {
           if (i > currentLine) return null;
           const isActive = i === currentLine;
           return (
@@ -233,6 +264,7 @@ export default function AnimatedTerminal() {
                 line={line}
                 isActive={isActive}
                 onDone={() => handleLineDone(i)}
+                locale={locale}
               />
             </div>
           );
@@ -240,7 +272,7 @@ export default function AnimatedTerminal() {
         {/* Blinking cursor at the end */}
         {currentLine >= 0 && (
           <div className="min-h-[1.5em]">
-            {currentLine >= LINES.length - 1 && (
+            {currentLine >= lines.length - 1 && (
               <span className="animate-pulse text-prism-cyan">▌</span>
             )}
           </div>

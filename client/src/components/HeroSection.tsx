@@ -11,7 +11,7 @@ import AnimatedTerminal from "@/components/AnimatedTerminal";
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663287025002/9FCABgkh4qp24hSM32ug7S/prism-hero-bg-ZapLqSCNvV2QuQ9Qbb2Wsk.webp";
 
 export default function HeroSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
@@ -79,7 +79,7 @@ export default function HeroSection() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
           >
-            <AnimatedTerminal />
+            <AnimatedTerminal locale={locale} />
           </motion.div>
         </div>
       </div>
