@@ -92,3 +92,15 @@
 - [x] 更新后续 Agent prompt 注入需求简报 + 竞品情报（通过 requirements_brief 上下文链注入）
 - [x] 编写/更新 vitest 测试（31 个测试全部通过）
 - [x] 保存 checkpoint
+
+## Phase 10 — 任务模板库 + 反馈机制 + 会议记录导出
+- [x] 任务模板库：定义 SaaS MVP、API 设计、移动端 App 三个预设模板（含推荐 prompt 和会议问题）
+- [x] 任务模板库：后端 task.templates 端点返回模板列表
+- [x] 任务模板库：前端 Workspace 模板选择器 UI（卡片式选择）
+- [x] 反馈机制：数据库 messageFeedback 表（messageId, userId, rating）
+- [x] 反馈机制：后端 task.feedback mutation + task.feedbacks query
+- [x] 反馈机制：前端每条会议消息增加满意/不满意按钮
+- [x] 会议记录导出：后端 task.exportMeeting 端点生成 Markdown 内容
+- [x] 会议记录导出：前端会议结束后显示“导出 Markdown”按钮
+- [x] 编写/更新 vitest 测试（45 个测试全部通过）
+- [x] 保存 checkpoint

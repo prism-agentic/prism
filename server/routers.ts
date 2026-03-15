@@ -7,6 +7,76 @@ import * as db from "./db";
 import { simulateAgentPipeline } from "./agentSimulator";
 import { runMeetingRound1, handleUserReply, generateRequirementsBrief } from "./requirementMeeting";
 
+// ─── Task Templates ───
+
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  nameZh: string;
+  description: string;
+  descriptionZh: string;
+  icon: string;
+  category: string;
+  prompt: string;
+  suggestedQuestions: string[];
+}
+
+export const TASK_TEMPLATES: TaskTemplate[] = [
+  {
+    id: "saas-mvp",
+    name: "SaaS MVP",
+    nameZh: "SaaS MVP 产品",
+    description: "Design and plan a complete SaaS MVP product from scratch, including user research, feature prioritization, technical architecture, and go-to-market strategy.",
+    descriptionZh: "从零设计和规划一个完整的 SaaS MVP 产品，包括用户研究、功能优先级排序、技术架构和上市策略。",
+    icon: "🚀",
+    category: "product",
+    prompt: "I want to build a SaaS MVP product. Help me design the complete product from user research to technical implementation plan.",
+    suggestedQuestions: [
+      "What specific problem does your SaaS product solve?",
+      "Who is your target user persona? (B2B/B2C, industry, company size)",
+      "What is your expected pricing model? (freemium, subscription tiers, usage-based)",
+      "What is your timeline for the MVP launch?",
+      "Do you have any technical preferences or constraints? (cloud provider, language, framework)",
+    ],
+  },
+  {
+    id: "api-design",
+    name: "API Design",
+    nameZh: "API 接口设计",
+    description: "Design a robust and scalable API system, including RESTful/GraphQL endpoint design, authentication, rate limiting, versioning, and comprehensive documentation.",
+    descriptionZh: "设计一个健壮且可扩展的 API 系统，包括 RESTful/GraphQL 端点设计、认证鉴权、限流、版本管理和完整文档。",
+    icon: "🔌",
+    category: "engineering",
+    prompt: "I need to design a comprehensive API system. Help me plan the API architecture, endpoints, authentication, and documentation.",
+    suggestedQuestions: [
+      "What type of API are you building? (REST, GraphQL, gRPC, WebSocket)",
+      "What are the main resources/entities your API will manage?",
+      "What authentication method do you prefer? (OAuth2, JWT, API keys)",
+      "What is the expected request volume? (requests per second)",
+      "Will this API be public-facing or internal only?",
+    ],
+  },
+  {
+    id: "mobile-app",
+    name: "Mobile App",
+    nameZh: "移动端 App",
+    description: "Plan and design a mobile application, including UX/UI design, cross-platform strategy, offline capabilities, push notifications, and app store optimization.",
+    descriptionZh: "规划和设计一个移动应用，包括 UX/UI 设计、跨平台策略、离线能力、推送通知和应用商店优化。",
+    icon: "📱",
+    category: "product",
+    prompt: "I want to build a mobile application. Help me plan the complete mobile app from UX design to technical implementation.",
+    suggestedQuestions: [
+      "What is the core functionality of your mobile app?",
+      "Which platforms do you need to support? (iOS, Android, or both)",
+      "What is your preferred development approach? (native, React Native, Flutter)",
+      "Does the app need offline functionality?",
+      "What third-party integrations are required? (payment, maps, social login)",
+    ],
+  },
+];
+
+// ─── Router ───
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -65,6 +135,11 @@ export const appRouter = router({
   }),
 
   task: router({
+    /** Get available task templates */
+    templates: publicProcedure.query(() => {
+      return TASK_TEMPLATES;
+    }),
+
     list: protectedProcedure
       .input(z.object({ projectId: z.number() }))
       .query(async ({ ctx, input }) => {
@@ -81,12 +156,14 @@ export const appRouter = router({
      * Create a new task.
      * skipMeeting = false (default): starts with requirement meeting (Conductor → Researcher → PM)
      * skipMeeting = true: skips meeting, goes directly to pipeline execution
+     * templateId: optional template ID to pre-fill prompt
      */
     create: protectedProcedure
       .input(z.object({
         projectId: z.number(),
         prompt: z.string().min(1),
         skipMeeting: z.boolean().optional().default(false),
+        templateId: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const task = await db.createTask({
@@ -120,7 +197,6 @@ export const appRouter = router({
         message: z.string().min(1),
       }))
       .mutation(async ({ ctx, input }) => {
-        // Verify task belongs to user and is in clarifying state
         const task = await db.getTaskById(input.taskId, ctx.user.id);
         if (!task) throw new Error("Task not found");
         if (task.status !== "clarifying") throw new Error("Task is not in meeting phase");
@@ -158,6 +234,86 @@ export const appRouter = router({
       .input(z.object({ taskId: z.number() }))
       .query(async ({ input }) => {
         return db.getTaskMeetingMessages(input.taskId);
+      }),
+
+    /**
+     * Submit feedback (satisfied/unsatisfied) on a meeting message.
+     */
+    feedback: protectedProcedure
+      .input(z.object({
+        messageId: z.number(),
+        rating: z.enum(["satisfied", "unsatisfied"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await db.upsertMessageFeedback({
+          messageId: input.messageId,
+          userId: ctx.user.id,
+          rating: input.rating,
+        });
+        return result;
+      }),
+
+    /**
+     * Get user's feedbacks for meeting messages of a task.
+     */
+    feedbacks: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const messages = await db.getTaskMeetingMessages(input.taskId);
+        const messageIds = messages.map(m => m.id);
+        return db.getMessageFeedbacks(messageIds, ctx.user.id);
+      }),
+
+    /**
+     * Export meeting transcript as Markdown.
+     * Returns the full meeting conversation + requirements brief as a Markdown string.
+     */
+    exportMeeting: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+
+        const messages = await db.getTaskMeetingMessages(input.taskId);
+
+        const senderLabels: Record<string, string> = {
+          conductor: "🎯 Conductor (指挥官)",
+          researcher: "🔍 Researcher (研究员)",
+          pm: "📋 Product Manager (产品经理)",
+          user: "👤 User (用户)",
+        };
+
+        let md = `# PRISM 需求会议记录\n\n`;
+        md += `**任务 ID:** ${task.id}\n`;
+        md += `**原始需求:** ${task.prompt}\n`;
+        md += `**创建时间:** ${task.createdAt.toISOString()}\n`;
+        md += `**状态:** ${task.status}\n\n`;
+        md += `---\n\n`;
+        md += `## 会议讨论\n\n`;
+
+        let currentRound = 0;
+        for (const msg of messages) {
+          if (msg.round !== currentRound) {
+            currentRound = msg.round;
+            md += `### Round ${currentRound}\n\n`;
+          }
+          const label = senderLabels[msg.sender] || msg.sender;
+          md += `**${label}**`;
+          if (msg.messageType) {
+            md += ` _(${msg.messageType})_`;
+          }
+          md += `\n\n`;
+          md += `${msg.content}\n\n`;
+          md += `---\n\n`;
+        }
+
+        // Append requirements brief if available
+        if (task.requirementsBrief) {
+          md += `## 需求简报 (Requirements Brief)\n\n`;
+          md += `${typeof task.requirementsBrief === 'string' ? task.requirementsBrief : JSON.stringify(task.requirementsBrief, null, 2)}\n\n`;
+        }
+
+        return { markdown: md, taskPrompt: task.prompt };
       }),
 
     logs: protectedProcedure

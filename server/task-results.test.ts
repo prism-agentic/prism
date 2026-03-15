@@ -90,8 +90,8 @@ describe("task.logs endpoint for results page", () => {
       skipMeeting: true,
     });
 
-    // Wait for initial logs to be generated
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Wait for initial logs to be generated (LLM calls need time)
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     expect(Array.isArray(logs)).toBe(true);
@@ -108,7 +108,7 @@ describe("task.logs endpoint for results page", () => {
     expect(firstLog).toHaveProperty("content");
     expect(firstLog).toHaveProperty("durationMs");
     expect(firstLog).toHaveProperty("createdAt");
-  });
+  }, 20000);
 
   it("returns empty array for task with no logs", async () => {
     const ctx = createAuthContext(104);
@@ -157,8 +157,8 @@ describe("agent simulator integration", () => {
       skipMeeting: true,
     });
 
-    // Wait for the conductor agent to start
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    // Wait for the conductor agent to start (LLM calls need time)
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     const roles = [...new Set(logs.map(l => l.agentRole))];
@@ -171,7 +171,7 @@ describe("agent simulator integration", () => {
     for (const log of logs) {
       expect(validStatuses).toContain(log.status);
     }
-  });
+  }, 20000);
 
   it("logs contain phase information in fast mode", async () => {
     const ctx = createAuthContext(107);
@@ -185,12 +185,12 @@ describe("agent simulator integration", () => {
       skipMeeting: true,
     });
 
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     expect(logs.length).toBeGreaterThanOrEqual(1);
     // First logs should be phase 0 (Discover)
     const firstLog = logs[0];
     expect(firstLog.phase).toBe(0);
-  });
+  }, 20000);
 });

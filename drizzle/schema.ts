@@ -103,3 +103,18 @@ export const meetingMessages = mysqlTable("meeting_messages", {
 
 export type MeetingMessage = typeof meetingMessages.$inferSelect;
 export type InsertMeetingMessage = typeof meetingMessages.$inferInsert;
+
+/**
+ * Message Feedback — records user satisfaction ratings on agent meeting messages
+ * rating: "satisfied" | "unsatisfied"
+ */
+export const messageFeedback = mysqlTable("message_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  messageId: int("messageId").notNull(),
+  userId: int("userId").notNull(),
+  rating: mysqlEnum("rating", ["satisfied", "unsatisfied"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MessageFeedback = typeof messageFeedback.$inferSelect;
+export type InsertMessageFeedback = typeof messageFeedback.$inferInsert;

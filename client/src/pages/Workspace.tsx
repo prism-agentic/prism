@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { Streamdown } from "streamdown";
 import {
@@ -28,6 +28,12 @@ import {
   Users,
   SkipForward,
   PlayCircle,
+  ThumbsUp,
+  ThumbsDown,
+  Download,
+  Rocket,
+  Code2,
+  Smartphone,
 } from "lucide-react";
 
 // ─── Agent Definitions ──────────────────────────────────────────────
@@ -46,6 +52,12 @@ const AGENTS: Record<string, { name: string; color: string; emoji: string }> = {
 };
 
 const PHASE_NAMES = ["Discover", "Strategy", "Scaffold", "Build", "Harden", "Launch"];
+
+const TEMPLATE_ICONS: Record<string, React.ReactNode> = {
+  "saas-mvp": <Rocket className="w-6 h-6" />,
+  "api-design": <Code2 className="w-6 h-6" />,
+  "mobile-app": <Smartphone className="w-6 h-6" />,
+};
 
 // ─── Shared Components ──────────────────────────────────────────────
 
@@ -96,9 +108,67 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+// ─── Feedback Buttons Component ─────────────────────────────────────
+
+function FeedbackButtons({
+  messageId,
+  currentRating,
+}: {
+  messageId: number;
+  currentRating?: "satisfied" | "unsatisfied" | null;
+}) {
+  const feedbackMutation = trpc.task.feedback.useMutation();
+  const [localRating, setLocalRating] = useState<"satisfied" | "unsatisfied" | null>(currentRating || null);
+
+  useEffect(() => {
+    setLocalRating(currentRating || null);
+  }, [currentRating]);
+
+  const handleFeedback = (rating: "satisfied" | "unsatisfied") => {
+    const newRating = localRating === rating ? null : rating;
+    setLocalRating(newRating);
+    if (newRating) {
+      feedbackMutation.mutate({ messageId, rating: newRating });
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => handleFeedback("satisfied")}
+        className={`p-1 rounded transition-all ${
+          localRating === "satisfied"
+            ? "bg-emerald-500/20 text-emerald-400"
+            : "hover:bg-white/10 text-muted-foreground/50 hover:text-emerald-400"
+        }`}
+        title="Satisfied"
+      >
+        <ThumbsUp className="w-3 h-3" />
+      </button>
+      <button
+        onClick={() => handleFeedback("unsatisfied")}
+        className={`p-1 rounded transition-all ${
+          localRating === "unsatisfied"
+            ? "bg-red-500/20 text-red-400"
+            : "hover:bg-white/10 text-muted-foreground/50 hover:text-red-400"
+        }`}
+        title="Unsatisfied"
+      >
+        <ThumbsDown className="w-3 h-3" />
+      </button>
+    </div>
+  );
+}
+
 // ─── Meeting Message Component ──────────────────────────────────────
 
-function MeetingMessage({ msg }: { msg: { id: number; sender: string; round: number; content: string; messageType: string | null; createdAt: Date } }) {
+function MeetingMessage({
+  msg,
+  feedbackRating,
+}: {
+  msg: { id: number; sender: string; round: number; content: string; messageType: string | null; createdAt: Date };
+  feedbackRating?: "satisfied" | "unsatisfied" | null;
+}) {
   const agent = AGENTS[msg.sender] || { name: msg.sender, color: "#888", emoji: "\u{1F916}" };
   const isUser = msg.sender === "user";
   const isBrief = msg.messageType === "brief";
@@ -167,10 +237,11 @@ function MeetingMessage({ msg }: { msg: { id: number; sender: string; round: num
           )}
         </div>
 
-        {/* Copy button for agent messages */}
+        {/* Copy button + Feedback buttons for agent messages */}
         {!isUser && (
-          <div className="flex items-center gap-1 mt-1">
+          <div className="flex items-center gap-2 mt-1">
             <CopyButton text={msg.content} />
+            <FeedbackButtons messageId={msg.id} currentRating={feedbackRating} />
           </div>
         )}
       </div>
@@ -246,12 +317,58 @@ function AgentLogEntry({ log, isLatest }: { log: any; isLatest: boolean }) {
             prose-code:text-prism-cyan prose-code:bg-prism-cyan/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
             prose-pre:bg-[#0a1628] prose-pre:border prose-pre:border-border/30 prose-pre:rounded-lg
             prose-strong:text-foreground
-            prose-a:text-prism-cyan prose-a:no-underline hover:prose-a:underline
           ">
             <Streamdown>{log.content}</Streamdown>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Template Selector Component ────────────────────────────────────
+
+function TemplateSelector({
+  onSelect,
+}: {
+  onSelect: (prompt: string, templateId: string) => void;
+}) {
+  const templatesQuery = trpc.task.templates.useQuery();
+  const templates = templatesQuery.data || [];
+
+  if (templatesQuery.isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="rounded-xl border border-border/30 bg-card/30 p-4 animate-pulse">
+            <div className="w-10 h-10 rounded-lg bg-border/30 mb-3" />
+            <div className="h-4 w-24 bg-border/30 rounded mb-2" />
+            <div className="h-3 w-full bg-border/20 rounded" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {templates.map(tpl => (
+        <button
+          key={tpl.id}
+          onClick={() => onSelect(tpl.prompt, tpl.id)}
+          className="text-left rounded-xl border border-border/40 bg-card/40 hover:bg-card/70 hover:border-prism-cyan/30 p-4 transition-all group"
+        >
+          <div className="w-10 h-10 rounded-lg bg-prism-cyan/10 border border-prism-cyan/20 flex items-center justify-center text-prism-cyan mb-3 group-hover:bg-prism-cyan/20 transition-colors">
+            {TEMPLATE_ICONS[tpl.id] || <Sparkles className="w-5 h-5" />}
+          </div>
+          <h4 className="text-sm font-semibold mb-1 group-hover:text-prism-cyan transition-colors">
+            {tpl.nameZh}
+          </h4>
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {tpl.descriptionZh}
+          </p>
+        </button>
+      ))}
     </div>
   );
 }
@@ -275,6 +392,11 @@ function MeetingView({
     { refetchInterval: 2000 }
   );
 
+  const feedbacksQuery = trpc.task.feedbacks.useQuery(
+    { taskId },
+    { enabled: (meetingQuery.data?.length ?? 0) > 0 }
+  );
+
   const replyMutation = trpc.task.reply.useMutation({
     onSuccess: () => {
       setReplyText("");
@@ -288,16 +410,46 @@ function MeetingView({
     },
   });
 
+  const exportQuery = trpc.task.exportMeeting.useQuery(
+    { taskId },
+    { enabled: false }
+  );
+
   const messages = meetingQuery.data || [];
+  const feedbacks = feedbacksQuery.data || [];
   const agentMessages = messages.filter(m => m.sender !== "user");
   const isWaitingForAgents = agentMessages.length === 0 || replyMutation.isPending;
   const hasBrief = messages.some(m => m.messageType === "brief");
   const isProcessing = replyMutation.isPending || confirmMutation.isPending;
 
+  // Build feedback lookup: messageId -> rating
+  const feedbackMap = useMemo(() => {
+    const map: Record<number, "satisfied" | "unsatisfied"> = {};
+    for (const fb of feedbacks) {
+      map[fb.messageId] = fb.rating as "satisfied" | "unsatisfied";
+    }
+    return map;
+  }, [feedbacks]);
+
   // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handleExport = async () => {
+    const result = await exportQuery.refetch();
+    if (result.data?.markdown) {
+      const blob = new Blob([result.data.markdown], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `prism-meeting-${taskId}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col">
@@ -320,6 +472,22 @@ function MeetingView({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Export button — show when there are messages */}
+            {messages.length > 0 && (
+              <button
+                onClick={handleExport}
+                disabled={exportQuery.isFetching}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-all disabled:opacity-50"
+                title="Export meeting transcript as Markdown"
+              >
+                {exportQuery.isFetching ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Download className="w-3 h-3" />
+                )}
+                <span className="hidden sm:inline">Export .md</span>
+              </button>
+            )}
             {!hasBrief && messages.length > 0 && (
               <button
                 onClick={() => confirmMutation.mutate({ taskId })}
@@ -372,7 +540,11 @@ function MeetingView({
         ) : (
           <>
             {messages.map(msg => (
-              <MeetingMessage key={msg.id} msg={msg as any} />
+              <MeetingMessage
+                key={msg.id}
+                msg={msg as any}
+                feedbackRating={feedbackMap[msg.id] || null}
+              />
             ))}
             {replyMutation.isPending && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground pl-12">
@@ -427,13 +599,27 @@ function MeetingView({
         </div>
       )}
 
-      {/* After brief generated — show proceed button */}
+      {/* After brief generated — show proceed button + export */}
       {hasBrief && task.status === "clarifying" && (
         <div className="border-t border-border/50 p-4 bg-emerald-500/5">
           <div className="flex items-center justify-between max-w-4xl mx-auto">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span className="text-sm text-emerald-400 font-medium">Requirements Brief ready</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span className="text-sm text-emerald-400 font-medium">Requirements Brief ready</span>
+              </div>
+              <button
+                onClick={handleExport}
+                disabled={exportQuery.isFetching}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-all disabled:opacity-50"
+              >
+                {exportQuery.isFetching ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Download className="w-3 h-3" />
+                )}
+                Export .md
+              </button>
             </div>
             <button
               onClick={() => confirmMutation.mutate({ taskId })}
@@ -464,6 +650,7 @@ export default function Workspace() {
   const [prompt, setPrompt] = useState("");
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
   const [skipMeeting, setSkipMeeting] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   const projectQuery = trpc.project.get.useQuery({ id: projectId }, { enabled: isAuthenticated && projectId > 0 });
@@ -481,6 +668,7 @@ export default function Workspace() {
     onSuccess: (data) => {
       setActiveTaskId(data.id);
       setPrompt("");
+      setSelectedTemplate(null);
       tasksQuery.refetch();
     },
   });
@@ -540,6 +728,22 @@ export default function Workspace() {
   // Determine what view to show for the active task
   const isMeetingPhase = activeTask?.status === "clarifying" || (activeTask?.status === "pending" && !activeTask?.meetingRound);
   const isPipelinePhase = activeTask?.status === "running" || activeTask?.status === "completed" || activeTask?.status === "failed";
+
+  const handleTemplateSelect = (templatePrompt: string, templateId: string) => {
+    setPrompt(templatePrompt);
+    setSelectedTemplate(templateId);
+  };
+
+  const handleSubmit = () => {
+    if (prompt.trim() && !createTaskMutation.isPending) {
+      createTaskMutation.mutate({
+        projectId,
+        prompt: prompt.trim(),
+        skipMeeting,
+        templateId: selectedTemplate || undefined,
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -722,17 +926,32 @@ export default function Workspace() {
             </>
           )}
 
-          {/* Empty State — no active task */}
+          {/* Empty State — no active task, show template selector */}
           {!activeTaskId && (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center max-w-md">
+            <div className="flex-1 flex items-center justify-center p-6">
+              <div className="text-center max-w-2xl w-full">
                 <div className="w-16 h-16 rounded-2xl bg-prism-cyan/10 flex items-center justify-center mx-auto mb-4">
                   <Sparkles className="w-8 h-8 text-prism-cyan/50" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Ready to collaborate</h3>
-                <p className="text-sm text-muted-foreground">
-                  Describe your task below. A structured requirement meeting with Conductor, Researcher, and PM will help refine your idea before 9 agents execute.
+                <p className="text-sm text-muted-foreground mb-6">
+                  Choose a template to get started quickly, or describe your own task below.
                 </p>
+
+                {/* Template Cards */}
+                <TemplateSelector onSelect={handleTemplateSelect} />
+
+                {selectedTemplate && (
+                  <div className="mt-4 p-3 rounded-lg bg-prism-cyan/5 border border-prism-cyan/20 text-left">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-prism-cyan" />
+                      <span className="text-xs font-medium text-prism-cyan">Template selected</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      You can edit the prompt below before starting.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -748,7 +967,7 @@ export default function Workspace() {
                     onChange={e => setPrompt(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === "Enter" && prompt.trim() && !createTaskMutation.isPending) {
-                        createTaskMutation.mutate({ projectId, prompt: prompt.trim(), skipMeeting });
+                        handleSubmit();
                       }
                     }}
                     placeholder="Describe your task... (e.g., Build a social e-commerce platform)"
@@ -757,11 +976,7 @@ export default function Workspace() {
                   />
                 </div>
                 <button
-                  onClick={() => {
-                    if (prompt.trim() && !createTaskMutation.isPending) {
-                      createTaskMutation.mutate({ projectId, prompt: prompt.trim(), skipMeeting });
-                    }
-                  }}
+                  onClick={handleSubmit}
                   disabled={!prompt.trim() || createTaskMutation.isPending}
                   className="px-5 py-3 bg-prism-cyan text-prism-navy font-semibold rounded-xl hover:bg-prism-cyan/90 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >

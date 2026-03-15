@@ -139,8 +139,8 @@ describe("task management", () => {
     // Use skipMeeting to go directly to pipeline
     const task = await caller.task.create({ projectId: project.id, prompt: "Test logs", skipMeeting: true });
 
-    // Wait for simulator to start generating logs
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Wait for simulator to start generating logs (LLM calls need time)
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     expect(logs.length).toBeGreaterThanOrEqual(1);
@@ -148,7 +148,7 @@ describe("task management", () => {
     expect(logs[0]).toHaveProperty("agentRole");
     expect(logs[0]).toHaveProperty("phase");
     expect(logs[0]).toHaveProperty("status");
-  });
+  }, 20000);
 });
 
 describe("agent simulator", () => {
@@ -160,15 +160,15 @@ describe("agent simulator", () => {
     // Use skipMeeting to go directly to pipeline
     const task = await caller.task.create({ projectId: project.id, prompt: "Simulate agents", skipMeeting: true });
 
-    // Wait for first agent to produce logs
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    // Wait for first agent to produce logs (LLM calls need time)
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     const logs = await caller.task.logs({ taskId: task.id });
     const roles = [...new Set(logs.map(l => l.agentRole))];
 
     // At minimum, conductor should have started
     expect(roles).toContain("conductor");
-  });
+  }, 20000);
 });
 
 describe("meeting mode default behavior", () => {

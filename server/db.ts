@@ -1,8 +1,8 @@
 import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
-  InsertUser, users, projects, tasks, agentLogs, meetingMessages,
-  type InsertProject, type InsertTask, type InsertAgentLog, type InsertMeetingMessage,
+  InsertUser, users, projects, tasks, agentLogs, meetingMessages, messageFeedback,
+  type InsertProject, type InsertTask, type InsertAgentLog, type InsertMeetingMessage, type InsertMessageFeedback,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -185,4 +185,37 @@ export async function getTaskMeetingMessages(taskId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(meetingMessages).where(eq(meetingMessages.taskId, taskId)).orderBy(meetingMessages.createdAt);
+}
+
+// ─── Message Feedback Queries ───
+
+export async function upsertMessageFeedback(data: InsertMessageFeedback) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Upsert: if user already rated this message, update the rating
+  const existing = await db.select().from(messageFeedback)
+    .where(and(eq(messageFeedback.messageId, data.messageId), eq(messageFeedback.userId, data.userId)))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(messageFeedback)
+      .set({ rating: data.rating })
+      .where(eq(messageFeedback.id, existing[0].id));
+    return { id: existing[0].id };
+  }
+  const result = await db.insert(messageFeedback).values(data);
+  return { id: result[0].insertId };
+}
+
+export async function getMessageFeedbacks(messageIds: number[], userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  if (messageIds.length === 0) return [];
+  // Get all feedbacks for the given message IDs by this user
+  const results = [];
+  for (const msgId of messageIds) {
+    const rows = await db.select().from(messageFeedback)
+      .where(and(eq(messageFeedback.messageId, msgId), eq(messageFeedback.userId, userId)));
+    results.push(...rows);
+  }
+  return results;
 }
