@@ -41,6 +41,7 @@ import {
   X,
 } from "lucide-react";
 import ModelSelector from "@/components/ModelSelector";
+import VerificationReportCard from "@/components/VerificationReportCard";
 
 // ─── Agent Definitions ──────────────────────────────────────────────
 
@@ -1216,35 +1217,41 @@ export default function Workspace() {
 
               {/* Task Result */}
               {activeTask?.status === "completed" && activeTask.result != null && (
-                <div className="mx-4 mb-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-semibold text-emerald-400">流水线完成</span>
+                <div className="mx-4 mb-3 space-y-3">
+                  <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span className="text-sm font-semibold text-emerald-400">流水线完成</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/monitor/${activeTaskId}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all text-muted-foreground hover:text-prism-cyan"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          监控
+                        </Link>
+                        <Link
+                          href={`/results/${activeTaskId}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md bg-prism-cyan text-prism-navy hover:bg-prism-cyan/90 transition-colors"
+                        >
+                          <Eye className="w-3 h-3" />
+                          查看完整结果
+                        </Link>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/monitor/${activeTaskId}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-border hover:bg-card hover:border-prism-cyan/30 transition-all text-muted-foreground hover:text-prism-cyan"
-                      >
-                        <BarChart3 className="w-3 h-3" />
-                        监控
-                      </Link>
-                      <Link
-                        href={`/results/${activeTaskId}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md bg-prism-cyan text-prism-navy hover:bg-prism-cyan/90 transition-colors"
-                      >
-                        <Eye className="w-3 h-3" />
-                        查看完整结果
-                      </Link>
-                    </div>
+                    <p className="text-sm text-foreground/80">
+                      {(() => {
+                        const r = activeTask.result as Record<string, unknown> | null;
+                        return String(r?.summary ?? "任务已成功完成。");
+                      })()}
+                    </p>
                   </div>
-                  <p className="text-sm text-foreground/80">
-                    {(() => {
-                      const r = activeTask.result as Record<string, unknown> | null;
-                      return String(r?.summary ?? "任务已成功完成。");
-                    })()}
-                  </p>
+                  {/* Verification Report — compact mode */}
+                  <div className="p-4 rounded-xl border border-border/30 bg-card/20">
+                    <VerificationReportCard taskId={activeTaskId!} mode="compact" />
+                  </div>
                 </div>
               )}
             </>

@@ -216,3 +216,11 @@
 - [x] TypeScript 编译检查通过（零错误）
 - [x] 全部 98 个测试通过（83 原有 + 15 验证专项）
 - [x] 保存 checkpoint
+
+## 前端验证报告展示
+- [x] 创建 VerificationReportCard 组件（门控状态、评分、验收标准逐条结果，支持 compact/full 两种模式）
+- [x] 集成到 Workspace 页面（流水线完成区域，compact 模式）
+- [x] 集成到 TaskResults 页面（Overview 和 Category Tabs 之间，full 模式）
+- [x] TypeScript 编译检查通过（零错误）
+- [x] 全部 83 个测试通过
+- [x] 保存 checkpoint
