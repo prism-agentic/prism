@@ -2,7 +2,9 @@ import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users, projects, tasks, agentLogs, meetingMessages, messageFeedback,
+  acceptanceCriteria, verificationReports,
   type InsertProject, type InsertTask, type InsertAgentLog, type InsertMeetingMessage, type InsertMessageFeedback,
+  type InsertAcceptanceCriteriaRow, type InsertVerificationReportRow,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -218,4 +220,50 @@ export async function getMessageFeedbacks(messageIds: number[], userId: number) 
     results.push(...rows);
   }
   return results;
+}
+
+// ─── Acceptance Criteria Queries ───
+
+export async function saveAcceptanceCriteria(data: InsertAcceptanceCriteriaRow) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(acceptanceCriteria).values(data);
+  return { id: result[0].insertId };
+}
+
+export async function getAcceptanceCriteria(taskId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(acceptanceCriteria)
+    .where(eq(acceptanceCriteria.taskId, taskId))
+    .orderBy(desc(acceptanceCriteria.createdAt))
+    .limit(1);
+  return result[0];
+}
+
+// ─── Verification Report Queries ───
+
+export async function saveVerificationReport(data: InsertVerificationReportRow) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(verificationReports).values(data);
+  return { id: result[0].insertId };
+}
+
+export async function getVerificationReports(taskId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(verificationReports)
+    .where(eq(verificationReports.taskId, taskId))
+    .orderBy(verificationReports.createdAt);
+}
+
+export async function getLatestVerificationReport(taskId: number, gate: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(verificationReports)
+    .where(and(eq(verificationReports.taskId, taskId), eq(verificationReports.gate, gate)))
+    .orderBy(desc(verificationReports.createdAt))
+    .limit(1);
+  return result[0];
 }

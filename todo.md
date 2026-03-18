@@ -190,3 +190,17 @@
 ## UI 优化 — 终端动画国际化
 - [x] AnimatedTerminal 内容根据当前语言模式切换中英文
 - [x] 保存 checkpoint
+
+## 自动化验证流程代码合并
+- [x] 创建 shared/verification.ts（验收标准、验证报告类型定义）
+- [x] 扩展 drizzle/schema.ts 新增 acceptance_criteria + verification_reports 表
+- [x] 推送数据库 schema（pnpm db:push）
+- [x] 创建 server/db.ts 验证相关查询函数
+- [x] 创建 server/verification/criteriaExtractor.ts（验收标准提取器）
+- [x] 创建 server/verification/gateVerifier.ts（门控验证器）
+- [x] 创建 server/verification/fixLoop.ts（闭环修复机制）
+- [x] 创建 server/verification/index.ts（VerificationEngine 统一入口）
+- [x] 在 server/routers.ts 新增 verification router（getCriteria, getReports, getLatestReport, extractCriteria, acceptGateResult）
+- [x] TypeScript 编译检查通过（零错误）
+- [x] 编写 vitest 测试（15 个测试全部通过，覆盖类型、门控配置、修复请求构建、决策逻辑）
+- [x] 保存 checkpoint

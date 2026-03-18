@@ -120,3 +120,45 @@ export const messageFeedback = mysqlTable("message_feedback", {
 
 export type MessageFeedback = typeof messageFeedback.$inferSelect;
 export type InsertMessageFeedback = typeof messageFeedback.$inferInsert;
+
+/**
+ * Acceptance Criteria — structured criteria extracted from requirements brief
+ * Used as the verification baseline for quality gates.
+ */
+export const acceptanceCriteria = mysqlTable("acceptance_criteria", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: int("taskId").notNull(),
+  /** JSON array of AcceptanceCriterion objects */
+  criteria: json("criteria").notNull(),
+  /** Hash of the requirements brief used to detect changes */
+  briefHash: varchar("briefHash", { length: 64 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AcceptanceCriteriaRow = typeof acceptanceCriteria.$inferSelect;
+export type InsertAcceptanceCriteriaRow = typeof acceptanceCriteria.$inferInsert;
+
+/**
+ * Verification Reports — records from each quality gate check.
+ * Each gate (post_strategy, post_build, final) produces one report per check round.
+ */
+export const verificationReports = mysqlTable("verification_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: int("taskId").notNull(),
+  /** Which gate: post_strategy | post_build | final */
+  gate: varchar("gate", { length: 32 }).notNull(),
+  /** JSON array of CriterionResult objects */
+  results: json("results").notNull(),
+  /** Overall score 0-100 */
+  overallScore: int("overallScore").notNull(),
+  /** Whether the gate was passed */
+  gatePass: int("gatePass").notNull().default(0),
+  /** Gate threshold used */
+  gateThreshold: int("gateThreshold").notNull(),
+  /** Fix round number (0 = first check) */
+  fixRound: int("fixRound").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type VerificationReportRow = typeof verificationReports.$inferSelect;
+export type InsertVerificationReportRow = typeof verificationReports.$inferInsert;

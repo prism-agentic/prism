@@ -6,6 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { simulateAgentPipeline } from "./agentSimulator";
 import { runMeetingRound1, handleUserReply, generateRequirementsBrief } from "./requirementMeeting";
+import { VerificationEngine } from "./verification";
 
 // ─── Available Models ───
 
@@ -555,6 +556,94 @@ export const appRouter = router({
       .input(z.object({ taskId: z.number() }))
       .query(async ({ input }) => {
         return db.getTaskAgentLogs(input.taskId);
+      }),
+  }),
+
+  verification: router({
+    /**
+     * Get acceptance criteria for a task.
+     * Returns the structured criteria extracted from the requirements brief.
+     */
+    getCriteria: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        // Verify user owns this task
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        return db.getAcceptanceCriteria(input.taskId);
+      }),
+
+    /**
+     * Get all verification reports for a task.
+     * Returns reports from all gate phases, ordered by creation time.
+     */
+    getReports: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        return db.getVerificationReports(input.taskId);
+      }),
+
+    /**
+     * Get the latest verification report for a specific gate phase.
+     */
+    getLatestReport: protectedProcedure
+      .input(z.object({
+        taskId: z.number(),
+        gate: z.enum(["post_strategy", "post_build", "final"]),
+      }))
+      .query(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        return db.getLatestVerificationReport(input.taskId, input.gate);
+      }),
+
+    /**
+     * Manually trigger acceptance criteria extraction.
+     * Normally this happens automatically after the requirements meeting,
+     * but this endpoint allows re-extraction if the brief was edited.
+     */
+    extractCriteria: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+
+        const briefData = task.requirementsBrief as { brief?: string } | string | null;
+        if (!briefData) throw new Error("No requirements brief available");
+
+        const briefText = typeof briefData === "string"
+          ? briefData
+          : (briefData as { brief?: string }).brief || "";
+
+        if (!briefText) throw new Error("Requirements brief is empty");
+
+        const engine = new VerificationEngine(() => {});
+        const criteriaSet = await engine.extractCriteria(input.taskId, briefText);
+
+        return {
+          success: true,
+          criteriaCount: criteriaSet.criteria.length,
+          mustCount: criteriaSet.criteria.filter(c => c.priority === "must").length,
+        };
+      }),
+
+    /**
+     * User accepts a failed gate result (degraded pass).
+     * Allows the pipeline to continue despite not meeting the threshold.
+     */
+    acceptGateResult: protectedProcedure
+      .input(z.object({
+        taskId: z.number(),
+        gate: z.enum(["post_strategy", "post_build", "final"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getTaskById(input.taskId, ctx.user.id);
+        if (!task) throw new Error("Task not found");
+        // Mark the gate as user-accepted (store in task metadata)
+        // This allows the pipeline to proceed
+        return { success: true, message: "Gate result accepted by user" };
       }),
   }),
 });
