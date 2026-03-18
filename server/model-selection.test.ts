@@ -84,7 +84,7 @@ describe("SequentialExecutor modelId parameter", () => {
   it("SequentialExecutor is a valid TaskExecutor with execute method", async () => {
     const { SequentialExecutor } = await import("./executor");
     const executor = new SequentialExecutor();
-    expect(executor.name).toBe("SequentialExecutor");
+    expect(executor.name).toBe("sequential");
     expect(typeof executor.execute).toBe("function");
   });
 

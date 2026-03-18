@@ -359,7 +359,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   // OpenRouter recommends these headers for identification
   if (usingOpenRouter) {
-    headers["HTTP-Referer"] = "https://prismapp-9fcabgkh.manus.space";
+    headers["HTTP-Referer"] = "https://github.com/prism-agentic/prism";
     headers["X-Title"] = "PRISM Multi-Agent Framework";
   }
 
