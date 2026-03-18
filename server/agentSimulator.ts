@@ -2,9 +2,18 @@
  * PRISM 智能体流水线 — LLM 驱动的多智能体协作
  * 每个智能体拥有专业化的系统提示词，并接收前序智能体的上下文，
  * 形成真正的协作链。
+ *
+ * 验证引擎集成：
+ * - 需求简报确认后 → 自动提取验收标准
+ * - Strategy 阶段后 → Gate 1 (post_strategy) 门控
+ * - Build 阶段后    → Gate 2 (post_build) 门控
+ * - Harden 阶段后   → Gate 3 (final) 门控
+ * - 门控失败时 → 定向修复循环 → 重新验证
  */
 import { invokeLLM } from "./_core/llm";
 import { createAgentLog, updateTask } from "./db";
+import { VerificationEngine } from "./verification";
+import type { GatePhase, VerificationReport } from "../shared/verification";
 
 // ─── 智能体定义 ───────────────────────────────────────────────
 const AGENTS = [
@@ -175,6 +184,14 @@ const PIPELINE_PHASES = [
   { phase: 5, name: "Launch",    agents: ["growth"] },
 ];
 
+// ─── 门控阶段映射 ─────────────────────────────────────────────
+// 定义在哪个流水线阶段完成后执行哪个门控
+const GATE_AFTER_PHASE: Record<number, GatePhase> = {
+  1: "post_strategy",  // Strategy 阶段（PM + UX）完成后
+  3: "post_build",     // Build 阶段（Backend + Frontend + DevOps）完成后
+  4: "final",          // Harden 阶段（Critic）完成后
+};
+
 // ─── LLM 调用辅助函数 ─────────────────────────────────────────────────
 async function callAgent(
   agentRole: string,
@@ -227,14 +244,214 @@ async function callAgent(
   return "智能体已完成但未产生输出。";
 }
 
+// ─── 门控日志记录辅助函数 ──────────────────────────────────────────
+async function emitGateLog(
+  taskId: number,
+  phase: number,
+  action: string,
+  content: string,
+  status: "thinking" | "working" | "done" | "error" | "reviewing",
+) {
+  await createAgentLog({
+    taskId,
+    agentName: "Quality Gate",
+    agentRole: "gate",
+    phase,
+    action,
+    content,
+    status,
+  });
+}
+
+// ─── 门控执行函数 ──────────────────────────────────────────
+async function runQualityGate(
+  engine: VerificationEngine,
+  taskId: number,
+  gate: GatePhase,
+  phaseIndex: number,
+  agentOutputs: Record<string, string>,
+  prompt: string,
+  modelId?: string,
+): Promise<{ passed: boolean; updatedOutputs: Record<string, string> }> {
+  const gateLabels: Record<GatePhase, string> = {
+    post_strategy: "策略阶段质量门控",
+    post_build: "构建阶段质量门控",
+    final: "最终质量验证",
+  };
+
+  const label = gateLabels[gate];
+
+  // 记录门控开始
+  await emitGateLog(taskId, phaseIndex, label, `🔍 开始 ${label}：正在对照验收标准验证各智能体输出...`, "thinking");
+
+  try {
+    // 运行门控验证
+    const report = await engine.runGate(taskId, gate, agentOutputs);
+
+    if (report.gatePass) {
+      // 门控通过
+      const passedCount = report.results.filter(r => r.status === "pass").length;
+      const totalCount = report.results.length;
+      await emitGateLog(
+        taskId,
+        phaseIndex,
+        label,
+        `✅ ${label}通过（评分: ${report.overallScore}/100，阈值: ${report.gateThreshold}）\n\n` +
+        `**验证结果**：${passedCount}/${totalCount} 条标准通过\n\n` +
+        formatGateResults(report),
+        "done",
+      );
+      return { passed: true, updatedOutputs: agentOutputs };
+    }
+
+    // 门控未通过 — 记录失败详情
+    const failedCriteria = report.results.filter(r => r.status === "fail" || r.status === "partial");
+    await emitGateLog(
+      taskId,
+      phaseIndex,
+      label,
+      `⚠️ ${label}未通过（评分: ${report.overallScore}/100，阈值: ${report.gateThreshold}）\n\n` +
+      `**失败标准**：${failedCriteria.length} 条\n\n` +
+      formatGateResults(report) +
+      `\n\n正在启动定向修复循环...`,
+      "reviewing",
+    );
+
+    // 运行修复循环
+    await emitGateLog(taskId, phaseIndex, `${label} — 修复`, `🔧 正在针对失败标准进行定向修复...`, "working");
+
+    const fixResult = await engine.runFixAndReVerify(
+      taskId,
+      gate,
+      report,
+      agentOutputs,
+      async (role: string, fixPrompt: string, context: string) => {
+        return callAgent(role, fixPrompt, context, modelId);
+      },
+    );
+
+    // 记录修复结果
+    if (fixResult.decision === "pass") {
+      await emitGateLog(
+        taskId,
+        phaseIndex,
+        `${label} — 修复完成`,
+        `✅ 修复后重新验证通过（评分: ${fixResult.report.overallScore}/100）\n\n` +
+        formatGateResults(fixResult.report),
+        "done",
+      );
+      return { passed: true, updatedOutputs: fixResult.updatedOutputs };
+    }
+
+    if (fixResult.decision === "degraded_pass") {
+      await emitGateLog(
+        taskId,
+        phaseIndex,
+        `${label} — 降级通过`,
+        `⚠️ 修复后评分提升但未达阈值（评分: ${fixResult.report.overallScore}/100）。所有必须项已通过，降级放行。\n\n` +
+        formatGateResults(fixResult.report),
+        "reviewing",
+      );
+      return { passed: true, updatedOutputs: fixResult.updatedOutputs };
+    }
+
+    // user_intervention — 修复失败
+    await emitGateLog(
+      taskId,
+      phaseIndex,
+      `${label} — 需要关注`,
+      `❌ 修复后仍有关键标准未通过（评分: ${fixResult.report.overallScore}/100）。流水线继续执行，但交付质量可能受影响。\n\n` +
+      formatGateResults(fixResult.report),
+      "error",
+    );
+    // 即使失败也继续执行，但记录状态
+    return { passed: false, updatedOutputs: fixResult.updatedOutputs };
+
+  } catch (error) {
+    // 验证引擎出错不应阻塞流水线
+    console.error(`[AgentSimulator] ${label} 执行出错:`, error);
+    await emitGateLog(
+      taskId,
+      phaseIndex,
+      `${label} — 跳过`,
+      `⚠️ ${label}执行出错，已跳过。流水线继续执行。\n\n错误: ${String(error)}`,
+      "error",
+    );
+    return { passed: false, updatedOutputs: agentOutputs };
+  }
+}
+
+// ─── 格式化门控结果 ──────────────────────────────────────────
+function formatGateResults(report: VerificationReport): string {
+  const lines: string[] = [];
+
+  for (const result of report.results) {
+    const statusIcon = {
+      pass: "✅",
+      fail: "❌",
+      partial: "⚠️",
+      not_applicable: "➖",
+    }[result.status];
+
+    lines.push(`${statusIcon} **${result.criterionId}**: ${result.reasoning}`);
+
+    if (result.fixSuggestion) {
+      lines.push(`  💡 修复建议: ${result.fixSuggestion}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
 // ─── 主流水线执行器 ──────────────────────────────────────────
 export async function simulateAgentPipeline(taskId: number, prompt: string, requirementsBrief?: string, modelId?: string) {
   // 累积所有智能体的输出，用于上下文传递
-  const agentOutputs: Record<string, string> = {};
+  let agentOutputs: Record<string, string> = {};
+
+  // 初始化验证引擎
+  const verificationEngine = new VerificationEngine((event) => {
+    console.log(`[Verification] 事件: ${event.type}`, JSON.stringify(event));
+  });
 
   // 如果有来自会议的需求简报，注入为预置上下文
   if (requirementsBrief) {
     agentOutputs["requirements_brief"] = requirementsBrief;
+
+    // 自动提取验收标准
+    try {
+      await emitGateLog(taskId, -1, "提取验收标准", "📋 正在从需求简报中提取验收标准...", "thinking");
+
+      const criteriaSet = await verificationEngine.extractCriteria(taskId, requirementsBrief);
+
+      const mustCount = criteriaSet.criteria.filter(c => c.priority === "must").length;
+      const shouldCount = criteriaSet.criteria.filter(c => c.priority === "should").length;
+      const niceCount = criteriaSet.criteria.filter(c => c.priority === "nice_to_have").length;
+
+      await emitGateLog(
+        taskId,
+        -1,
+        "验收标准已就绪",
+        `📋 已从需求简报中提取 **${criteriaSet.criteria.length}** 条验收标准\n\n` +
+        `- 🔴 必须 (Must): ${mustCount} 条\n` +
+        `- 🟡 应该 (Should): ${shouldCount} 条\n` +
+        `- 🟢 可选 (Nice-to-have): ${niceCount} 条\n\n` +
+        `**标准列表：**\n` +
+        criteriaSet.criteria.map(c => {
+          const icon = c.priority === "must" ? "🔴" : c.priority === "should" ? "🟡" : "🟢";
+          return `${icon} ${c.id}: ${c.description}`;
+        }).join("\n"),
+        "done",
+      );
+    } catch (error) {
+      console.error("[AgentSimulator] 验收标准提取失败:", error);
+      await emitGateLog(
+        taskId,
+        -1,
+        "验收标准提取跳过",
+        `⚠️ 验收标准提取失败，流水线将在无门控模式下继续执行。\n\n错误: ${String(error)}`,
+        "error",
+      );
+    }
   }
 
   try {
@@ -301,10 +518,28 @@ export async function simulateAgentPipeline(taskId: number, prompt: string, requ
           durationMs,
         });
       }
+
+      // ─── 质量门控检查 ─────────────────────────────────
+      const gatePhase = GATE_AFTER_PHASE[phase.phase];
+      if (gatePhase && verificationEngine.getCriteria()) {
+        const gateResult = await runQualityGate(
+          verificationEngine,
+          taskId,
+          gatePhase,
+          phase.phase,
+          agentOutputs,
+          prompt,
+          modelId,
+        );
+
+        // 使用修复后的输出（如果有修复）
+        agentOutputs = gateResult.updatedOutputs;
+      }
     }
 
-    // 构建最终结果摘要
-    const resultSummary = buildResultSummary(prompt, agentOutputs);
+    // 构建最终结果摘要（包含验证信息）
+    const criteria = verificationEngine.getCriteria();
+    const resultSummary = buildResultSummary(prompt, agentOutputs, criteria ? criteria.criteria.length : 0);
 
     // 标记任务为已完成
     await updateTask(taskId, {
@@ -371,16 +606,24 @@ function buildContext(outputs: Record<string, string>, currentRole: string): str
 function buildResultSummary(
   prompt: string,
   outputs: Record<string, string>,
+  criteriaCount: number = 0,
 ): Record<string, unknown> {
   return {
-    summary: `任务「${prompt}」已通过 6 个流水线阶段、${AGENTS.length} 个专业 AI 智能体成功完成。`,
+    summary: `任务「${prompt}」已通过 6 个流水线阶段、${AGENTS.length} 个专业 AI 智能体成功完成。` +
+      (criteriaCount > 0 ? ` 经过 ${criteriaCount} 条验收标准的质量门控验证。` : ""),
     phases: PIPELINE_PHASES.map(p => p.name),
     agentsUsed: AGENTS.length,
-    deliverables: Object.entries(outputs).map(([role, content]) => ({
-      agent: AGENTS.find(a => a.role === role)?.name ?? role,
-      role,
-      contentLength: content.length,
-      preview: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
-    })),
+    qualityGates: criteriaCount > 0 ? {
+      criteriaCount,
+      gatesExecuted: ["post_strategy", "post_build", "final"],
+    } : undefined,
+    deliverables: Object.entries(outputs)
+      .filter(([role]) => role !== "requirements_brief")
+      .map(([role, content]) => ({
+        agent: AGENTS.find(a => a.role === role)?.name ?? role,
+        role,
+        contentLength: content.length,
+        preview: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
+      })),
   };
 }

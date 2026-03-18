@@ -204,3 +204,15 @@
 - [x] TypeScript 编译检查通过（零错误）
 - [x] 编写 vitest 测试（15 个测试全部通过，覆盖类型、门控配置、修复请求构建、决策逻辑）
 - [x] 保存 checkpoint
+
+## 验证引擎集成到 agentSimulator 流水线
+- [x] 在需求简报确认后自动提取验收标准（criteriaExtractor）
+- [x] 在策略阶段后（PM/UX 完成后）插入 Gate 1 门控
+- [x] 在构建阶段后（Backend/Frontend/DevOps 完成后）插入 Gate 2 门控
+- [x] 在最终验证阶段插入 Gate 3 门控
+- [x] 门控失败时触发定向修复循环
+- [x] 通过 emitLog 发送验证事件供前端展示
+- [x] 更新前端 AgentMonitor 展示质量门控状态（GateNode + GateDetailPanel）
+- [x] TypeScript 编译检查通过（零错误）
+- [x] 全部 98 个测试通过（83 原有 + 15 验证专项）
+- [x] 保存 checkpoint
