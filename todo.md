@@ -224,3 +224,15 @@
 - [x] TypeScript 编译检查通过（零错误）
 - [x] 全部 83 个测试通过
 - [x] 保存 checkpoint
+
+## TaskExecutor 抽象层封装
+- [x] 定义 TaskExecutor 接口和 TaskEvent 事件流类型（shared/taskEvents.ts + server/executor/types.ts）
+- [x] 创建 EventBus 事件总线（server/executor/eventBus.ts）
+- [x] 创建 SequentialExecutor 封装现有 agentSimulator（server/executor/sequentialExecutor.ts）
+- [x] 创建 Orchestrator 编排层（server/executor/orchestrator.ts）
+- [x] 改造 routers.ts 使用 Orchestrator 替代直接调用 agentSimulator
+- [x] 创建 Agent 定义注册表（server/executor/agentRegistry.ts）
+- [x] 创建 LLM 调用辅助模块（server/executor/llmHelper.ts）
+- [x] TypeScript 编译检查通过（零错误）
+- [x] 编写/更新 vitest 测试（31 个 executor 测试全部通过）
+- [ ] 保存 checkpoint

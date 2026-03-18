@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { simulateAgentPipeline } from "./agentSimulator";
+import { runTask, type ExecutorContext } from "./executor";
 import { runMeetingRound1, handleUserReply, generateRequirementsBrief } from "./requirementMeeting";
 import { VerificationEngine } from "./verification";
 
@@ -288,8 +289,15 @@ export const appRouter = router({
         const modelId = project?.modelId || undefined;
 
         if (input.skipMeeting) {
-          // Fast mode: skip meeting, go directly to pipeline
-          simulateAgentPipeline(task.id, input.prompt, undefined, modelId).catch(console.error);
+          // Fast mode: skip meeting, go directly to pipeline via TaskExecutor
+          const executorCtx: ExecutorContext = {
+            taskId: task.id,
+            userId: ctx.user.id,
+            projectId: input.projectId,
+            prompt: input.prompt,
+            config: { modelId },
+          };
+          runTask(executorCtx).catch(console.error);
         } else {
           // Normal mode: start requirement meeting
           runMeetingRound1(task.id, input.prompt, modelId).catch(console.error);
@@ -369,8 +377,18 @@ export const appRouter = router({
         const project = await db.getProjectById(task.projectId, ctx.user.id);
         const modelId = project?.modelId || undefined;
 
-        // Start pipeline execution with the approved brief
-        simulateAgentPipeline(input.taskId, task.prompt, briefText, modelId).catch(console.error);
+        // Start pipeline execution with the approved brief via TaskExecutor
+        const executorCtx: ExecutorContext = {
+          taskId: input.taskId,
+          userId: ctx.user.id,
+          projectId: task.projectId,
+          prompt: task.prompt,
+          config: {
+            modelId,
+            requirementsBrief: briefText,
+          },
+        };
+        runTask(executorCtx).catch(console.error);
 
         return { success: true };
       }),
@@ -455,8 +473,17 @@ export const appRouter = router({
         // Generate requirements brief
         const brief = await generateRequirementsBrief(input.taskId, task.prompt);
 
-        // Start pipeline execution with the enriched context
-        simulateAgentPipeline(input.taskId, task.prompt, brief).catch(console.error);
+        // Start pipeline execution with the enriched context via TaskExecutor
+        const executorCtx: ExecutorContext = {
+          taskId: input.taskId,
+          userId: ctx.user.id,
+          projectId: task.projectId,
+          prompt: task.prompt,
+          config: {
+            requirementsBrief: brief,
+          },
+        };
+        runTask(executorCtx).catch(console.error);
 
         return { success: true, brief };
       }),
