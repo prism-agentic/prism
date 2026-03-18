@@ -28,10 +28,12 @@ import {
   getListenerCount,
 } from "./eventBus";
 import { SequentialExecutor } from "./sequentialExecutor";
+import { ConcurrentExecutor } from "./concurrentExecutor";
 import {
   isTaskRunning,
   getRunningTaskCount,
   getRunningTaskIds,
+  getAvailableExecutors,
 } from "./orchestrator";
 import type { TaskEvent } from "../../shared/taskEvents";
 import type { TaskExecutor, ExecutorContext } from "./types";
@@ -291,7 +293,28 @@ describe("SequentialExecutor", () => {
   });
 });
 
-// ─── Orchestrator 测试 ─────────────────────────────────────
+/// ─── ConcurrentExecutor 接口测试 ───────────────────────────────
+
+describe("ConcurrentExecutor", () => {
+  it("should implement TaskExecutor interface", () => {
+    const executor = new ConcurrentExecutor();
+    expect(executor.name).toBe("concurrent");
+    expect(typeof executor.execute).toBe("function");
+  });
+
+  it("should satisfy TaskExecutor type constraint", () => {
+    const executor: TaskExecutor = new ConcurrentExecutor();
+    expect(executor.name).toBeTruthy();
+  });
+
+  it("should have a different name than SequentialExecutor", () => {
+    const seq = new SequentialExecutor();
+    const con = new ConcurrentExecutor();
+    expect(seq.name).not.toBe(con.name);
+  });
+});
+
+// ─── Orchestrator 测试 ─────────────────────────────────
 
 describe("Orchestrator", () => {
   it("should report no running tasks initially", () => {
@@ -301,6 +324,24 @@ describe("Orchestrator", () => {
 
   it("isTaskRunning should return false for non-running tasks", () => {
     expect(isTaskRunning(12345)).toBe(false);
+  });
+
+  it("getAvailableExecutors should list all executors", () => {
+    const executors = getAvailableExecutors();
+    expect(executors.length).toBe(3);
+    const names = executors.map(e => e.name);
+    expect(names).toContain("sequential");
+    expect(names).toContain("concurrent");
+    expect(names).toContain("auto");
+  });
+
+  it("each executor should have a description", () => {
+    const executors = getAvailableExecutors();
+    for (const exec of executors) {
+      expect(exec.name).toBeTruthy();
+      expect(exec.description).toBeTruthy();
+      expect(exec.description.length).toBeGreaterThan(5);
+    }
   });
 });
 

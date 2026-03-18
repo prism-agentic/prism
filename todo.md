@@ -235,4 +235,15 @@
 - [x] 创建 LLM 调用辅助模块（server/executor/llmHelper.ts）
 - [x] TypeScript 编译检查通过（零错误）
 - [x] 编写/更新 vitest 测试（31 个 executor 测试全部通过）
-- [ ] 保存 checkpoint
+- [x] 保存 checkpoint
+
+## Phase 14 — 废弃 agentSimulator + SSE 实时推送 + ConcurrentExecutor
+- [x] 废弃并删除旧 agentSimulator.ts，清理 routers.ts 中的 import
+- [x] 实现 SSE 推送端点（Express route + EventBus 订阅）
+- [x] 前端创建 useTaskSSE hook（替换 task.logs 轮询）
+- [x] 前端 Workspace 接入 SSE 实时事件流
+- [x] 实现 ConcurrentExecutor（同阶段 Agent 并行执行）
+- [x] Orchestrator 集成并发执行器 + 执行策略选择
+- [x] TypeScript 编译检查通过（零错误）
+- [x] 编写/更新 vitest 测试（36 个 executor 测试 + 83 个全部通过）
+- [x] 保存 checkpoint

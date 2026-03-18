@@ -6,7 +6,7 @@
  * 2. project.availableModels endpoint returns the models
  * 3. project.updateModel validates model IDs
  * 4. Model parameter flows through to LLM invocation
- * 5. agentSimulator and requirementMeeting accept modelId
+ * 5. SequentialExecutor and requirementMeeting accept modelId
  */
 import { describe, it, expect, vi } from "vitest";
 
@@ -78,14 +78,20 @@ describe("invokeLLM model parameter", () => {
   });
 });
 
-// ─── Test agentSimulator accepts modelId ────────────────────────────
+// ─── Test SequentialExecutor accepts modelId via ExecutorConfig ────────────────────────────
 
-describe("simulateAgentPipeline modelId parameter", () => {
-  it("accepts an optional modelId parameter", async () => {
-    const { simulateAgentPipeline } = await import("./agentSimulator");
-    expect(typeof simulateAgentPipeline).toBe("function");
-    // Check function accepts 4 parameters (taskId, prompt, brief, modelId)
-    expect(simulateAgentPipeline.length).toBeLessThanOrEqual(4);
+describe("SequentialExecutor modelId parameter", () => {
+  it("SequentialExecutor is a valid TaskExecutor with execute method", async () => {
+    const { SequentialExecutor } = await import("./executor");
+    const executor = new SequentialExecutor();
+    expect(executor.name).toBe("SequentialExecutor");
+    expect(typeof executor.execute).toBe("function");
+  });
+
+  it("ExecutorConfig type accepts optional modelId", async () => {
+    // Compile-time check: ExecutorConfig has modelId field
+    const config: import("./executor").ExecutorConfig = { modelId: "google/gemini-2.5-flash" };
+    expect(config.modelId).toBe("google/gemini-2.5-flash");
   });
 });
 

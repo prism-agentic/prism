@@ -1,5 +1,5 @@
 /**
- * LLM 调用辅助函数 — 从 agentSimulator.ts 提取
+ * LLM 调用辅助函数
  *
  * 封装 invokeLLM 调用，包含重试机制和错误处理。
  * 被 SequentialExecutor 和修复循环使用。

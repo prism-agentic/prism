@@ -1,17 +1,19 @@
 /**
- * SequentialExecutor — 串行执行器
+ * ConcurrentExecutor — 并发执行器
  *
- * 核心流水线执行逻辑的 TaskExecutor 接口实现。
- * 保留完整的功能：
- * - 6 阶段串行流水线
- * - 质量门控（3 个 Gate）
- * - 修复循环
- * - 验收标准提取
+ * 基于 TaskExecutor 接口的并发执行策略。
+ * 同一阶段内的多个 Agent 并行工作，缩短流水线总耗时。
  *
- * 核心变化：
- * - 不再直接写数据库，而是通过 yield TaskEvent 产出事件
- * - 数据库持久化由 Orchestrator 在消费事件时完成
- * - 但为了向后兼容，当前仍在内部做持久化（后续可迁移到 Orchestrator）
+ * 核心设计：
+ * - 阶段间仍然串行（因为后续阶段依赖前序阶段的输出）
+ * - 同阶段内的 Agent 并发执行（Promise.allSettled）
+ * - 通过事件队列保证事件产出的有序性
+ * - 上下文依赖自动解析：只有当依赖的 Agent 都完成后才开始
+ * - 质量门控逻辑与 SequentialExecutor 共享
+ *
+ * 并发安全：
+ * - agentOutputs 的写入通过 outputKey 隔离，不同 Agent 写不同 key
+ * - 事件队列通过 push + drain 模式保证顺序
  */
 
 import type { TaskExecutor, ExecutorContext } from "./types";
@@ -28,15 +30,24 @@ import { callAgent } from "./llmHelper";
 import { createAgentLog, updateTask } from "../db";
 import { VerificationEngine } from "../verification";
 
-// ─── 门控阶段映射 ─────────────────────────────────────────────
+// ─── 门控阶段映射（与 SequentialExecutor 一致） ─────────────────
 const GATE_AFTER_PHASE: Record<number, GatePhase> = {
   1: "post_strategy",
   3: "post_build",
   4: "final",
 };
 
-export class SequentialExecutor implements TaskExecutor {
-  readonly name = "sequential";
+// ─── 并发 Agent 执行结果 ─────────────────────────────────────
+interface AgentResult {
+  role: string;
+  outputKey: string;
+  output: string;
+  durationMs: number;
+  events: TaskEvent[];
+}
+
+export class ConcurrentExecutor implements TaskExecutor {
+  readonly name = "concurrent";
 
   async *execute(ctx: ExecutorContext): AsyncGenerator<TaskEvent, void, unknown> {
     let agentOutputs: Record<string, string> = {};
@@ -50,7 +61,6 @@ export class SequentialExecutor implements TaskExecutor {
     if (ctx.config.requirementsBrief) {
       agentOutputs["requirements_brief"] = ctx.config.requirementsBrief;
 
-      // 提取验收标准
       try {
         yield* this.emitGateLog(ctx.taskId, -1, "提取验收标准", "📋 正在从需求简报中提取验收标准...", "thinking");
 
@@ -76,7 +86,7 @@ export class SequentialExecutor implements TaskExecutor {
           "done",
         );
       } catch (error) {
-        console.error("[SequentialExecutor] 验收标准提取失败:", error);
+        console.error("[ConcurrentExecutor] 验收标准提取失败:", error);
         yield* this.emitGateLog(
           ctx.taskId,
           -1,
@@ -102,7 +112,7 @@ export class SequentialExecutor implements TaskExecutor {
     });
 
     try {
-      // ─── 主流水线循环 ───────────────────────────────────
+      // ─── 主流水线循环（阶段间串行） ───────────────────────
       for (const phase of PIPELINE_PHASES) {
         // 发射阶段变更事件
         yield {
@@ -114,106 +124,13 @@ export class SequentialExecutor implements TaskExecutor {
 
         await updateTask(ctx.taskId, { currentPhase: phase.index });
 
-        // 执行该阶段的每个 Agent
-        for (const agentRole of phase.agents) {
-          const agentDef = AGENT_REGISTRY[agentRole];
-          if (!agentDef) continue;
-
-          const agent: AgentIdentity = {
-            name: agentDef.name,
-            role: agentDef.role,
-            department: agentDef.department,
-          };
-          const actionLabel = getActionLabel(agentRole, phase.index);
-
-          // 发射 Agent 思考中
-          yield {
-            type: "agent:status",
-            taskId: ctx.taskId,
-            agent,
-            phase: phase.index,
-            status: "thinking",
-            action: actionLabel,
-            timestamp: Date.now(),
-          };
-
-          await createAgentLog({
-            taskId: ctx.taskId,
-            agentName: agent.name,
-            agentRole: agent.role,
-            phase: phase.index,
-            action: actionLabel,
-            content: null,
-            status: "thinking",
-          });
-
-          // 构建上下文
-          const previousContext = buildAgentContext(agentOutputs, agentRole);
-
-          // 发射 Agent 工作中
-          yield {
-            type: "agent:status",
-            taskId: ctx.taskId,
-            agent,
-            phase: phase.index,
-            status: "working",
-            action: actionLabel,
-            timestamp: Date.now(),
-          };
-
-          await createAgentLog({
-            taskId: ctx.taskId,
-            agentName: agent.name,
-            agentRole: agent.role,
-            phase: phase.index,
-            action: actionLabel,
-            content: "正在使用 AI 分析并生成交付物...",
-            status: "working",
-          });
-
-          // 调用 LLM
-          const startTime = Date.now();
-          const output = await callAgent(agentRole, ctx.prompt, previousContext, ctx.config.modelId);
-          const durationMs = Date.now() - startTime;
-
-          // 存储输出用于上下文链
-          const outputKey = phase.index === 3 && agentRole !== "devops"
-            ? `${agentRole}_build`
-            : agentRole;
-          agentOutputs[outputKey] = output;
-
-          // 发射 Agent 输出
-          yield {
-            type: "agent:output",
-            taskId: ctx.taskId,
-            agent,
-            phase: phase.index,
-            content: output,
-            isStreaming: false,
-            timestamp: Date.now(),
-          };
-
-          // 发射 Agent 完成
-          yield {
-            type: "agent:status",
-            taskId: ctx.taskId,
-            agent,
-            phase: phase.index,
-            status: "done",
-            action: actionLabel,
-            timestamp: Date.now(),
-          };
-
-          await createAgentLog({
-            taskId: ctx.taskId,
-            agentName: agent.name,
-            agentRole: agent.role,
-            phase: phase.index,
-            action: actionLabel,
-            content: output,
-            status: "done",
-            durationMs,
-          });
+        // ─── 阶段内并发执行 ─────────────────────────────
+        if (phase.agents.length === 1) {
+          // 单 Agent 阶段：直接串行执行（无需并发开销）
+          yield* this.executeAgent(ctx, phase.index, phase.agents[0], agentOutputs);
+        } else {
+          // 多 Agent 阶段：并发执行
+          yield* this.executeConcurrentAgents(ctx, phase.index, phase.agents, agentOutputs);
         }
 
         // ─── 质量门控检查 ─────────────────────────────────
@@ -228,8 +145,6 @@ export class SequentialExecutor implements TaskExecutor {
             ctx.prompt,
             ctx.config.modelId,
           );
-
-          // 使用修复后的输出
           agentOutputs = gateResult.updatedOutputs;
         }
       }
@@ -257,9 +172,8 @@ export class SequentialExecutor implements TaskExecutor {
         result: resultSummary,
       });
     } catch (error) {
-      console.error("[SequentialExecutor] 流水线错误:", error);
+      console.error("[ConcurrentExecutor] 流水线错误:", error);
 
-      // 发射错误事件
       yield {
         type: "error",
         taskId: ctx.taskId,
@@ -268,7 +182,6 @@ export class SequentialExecutor implements TaskExecutor {
         timestamp: Date.now(),
       };
 
-      // 发射任务失败事件
       yield {
         type: "task:status",
         taskId: ctx.taskId,
@@ -284,7 +197,403 @@ export class SequentialExecutor implements TaskExecutor {
     }
   }
 
-  // ─── 质量门控执行 ─────────────────────────────────────────
+  // ─── 并发执行同阶段的多个 Agent ─────────────────────────────
+
+  /**
+   * 并发执行同阶段的多个 Agent。
+   *
+   * 策略：
+   * 1. 分析每个 Agent 的 contextFrom 依赖
+   * 2. 依赖已满足的 Agent 立即启动
+   * 3. 依赖未满足的 Agent 等待依赖完成后启动
+   * 4. 所有 Agent 通过 Promise.allSettled 并发执行
+   *
+   * 注意：同阶段的 Agent 通常互不依赖（如 backend 和 frontend 在 Scaffold 阶段），
+   * 但在 Build 阶段 devops 依赖 backend_build，需要等待。
+   */
+  private async *executeConcurrentAgents(
+    ctx: ExecutorContext,
+    phaseIndex: number,
+    agentRoles: string[],
+    agentOutputs: Record<string, string>,
+  ): AsyncGenerator<TaskEvent, void, unknown> {
+    // 分析依赖关系，分为可立即执行和需等待的
+    const { immediate, deferred } = this.analyzeDependencies(agentRoles, agentOutputs, phaseIndex);
+
+    console.log(
+      `[ConcurrentExecutor] 阶段 ${phaseIndex}: 并发=${immediate.length}, 延迟=${deferred.length}`,
+    );
+
+    // 第一批：并发执行所有可立即启动的 Agent
+    if (immediate.length > 0) {
+      const results = await this.runAgentsConcurrently(ctx, phaseIndex, immediate, agentOutputs);
+
+      // 按顺序产出所有事件
+      for (const result of results) {
+        for (const event of result.events) {
+          yield event;
+        }
+        // 存储输出到 agentOutputs（供后续 Agent 使用）
+        agentOutputs[result.outputKey] = result.output;
+      }
+    }
+
+    // 第二批：依赖已满足的延迟 Agent（此时第一批已完成）
+    if (deferred.length > 0) {
+      // 重新检查依赖是否已满足
+      const nowReady: string[] = [];
+      const stillWaiting: string[] = [];
+
+      for (const role of deferred) {
+        if (this.areDependenciesMet(role, agentOutputs, phaseIndex)) {
+          nowReady.push(role);
+        } else {
+          stillWaiting.push(role);
+        }
+      }
+
+      // 并发执行已就绪的
+      if (nowReady.length > 0) {
+        const results = await this.runAgentsConcurrently(ctx, phaseIndex, nowReady, agentOutputs);
+        for (const result of results) {
+          for (const event of result.events) {
+            yield event;
+          }
+          agentOutputs[result.outputKey] = result.output;
+        }
+      }
+
+      // 仍未就绪的串行执行（兜底）
+      for (const role of stillWaiting) {
+        yield* this.executeAgent(ctx, phaseIndex, role, agentOutputs);
+      }
+    }
+  }
+
+  // ─── 并发运行一组 Agent ─────────────────────────────────────
+
+  private async runAgentsConcurrently(
+    ctx: ExecutorContext,
+    phaseIndex: number,
+    agentRoles: string[],
+    agentOutputs: Record<string, string>,
+  ): Promise<AgentResult[]> {
+    const promises = agentRoles.map(role =>
+      this.runSingleAgentCollectEvents(ctx, phaseIndex, role, agentOutputs),
+    );
+
+    const settled = await Promise.allSettled(promises);
+
+    const results: AgentResult[] = [];
+    for (let i = 0; i < settled.length; i++) {
+      const result = settled[i];
+      if (result.status === "fulfilled") {
+        results.push(result.value);
+      } else {
+        // Agent 执行失败，生成错误事件
+        const role = agentRoles[i];
+        const agentDef = AGENT_REGISTRY[role];
+        console.error(`[ConcurrentExecutor] Agent ${role} 执行失败:`, result.reason);
+        results.push({
+          role,
+          outputKey: role,
+          output: `[错误] Agent ${agentDef?.name ?? role} 执行失败: ${String(result.reason)}`,
+          durationMs: 0,
+          events: [
+            {
+              type: "agent:status",
+              taskId: ctx.taskId,
+              agent: {
+                name: agentDef?.name ?? role,
+                role,
+                department: agentDef?.department ?? "unknown",
+              },
+              phase: phaseIndex,
+              status: "error",
+              action: `执行失败: ${String(result.reason).substring(0, 100)}`,
+              timestamp: Date.now(),
+            },
+          ],
+        });
+      }
+    }
+
+    return results;
+  }
+
+  // ─── 单个 Agent 执行（收集事件而非直接 yield） ─────────────────
+
+  private async runSingleAgentCollectEvents(
+    ctx: ExecutorContext,
+    phaseIndex: number,
+    agentRole: string,
+    agentOutputs: Record<string, string>,
+  ): Promise<AgentResult> {
+    const agentDef = AGENT_REGISTRY[agentRole];
+    if (!agentDef) {
+      throw new Error(`Agent ${agentRole} 未在注册表中找到`);
+    }
+
+    const agent: AgentIdentity = {
+      name: agentDef.name,
+      role: agentDef.role,
+      department: agentDef.department,
+    };
+    const actionLabel = getActionLabel(agentRole, phaseIndex);
+    const events: TaskEvent[] = [];
+
+    // Agent 思考中
+    events.push({
+      type: "agent:status",
+      taskId: ctx.taskId,
+      agent,
+      phase: phaseIndex,
+      status: "thinking",
+      action: actionLabel,
+      timestamp: Date.now(),
+    });
+
+    await createAgentLog({
+      taskId: ctx.taskId,
+      agentName: agent.name,
+      agentRole: agent.role,
+      phase: phaseIndex,
+      action: actionLabel,
+      content: null,
+      status: "thinking",
+    });
+
+    // 构建上下文
+    const previousContext = buildAgentContext(agentOutputs, agentRole);
+
+    // Agent 工作中
+    events.push({
+      type: "agent:status",
+      taskId: ctx.taskId,
+      agent,
+      phase: phaseIndex,
+      status: "working",
+      action: actionLabel,
+      timestamp: Date.now(),
+    });
+
+    await createAgentLog({
+      taskId: ctx.taskId,
+      agentName: agent.name,
+      agentRole: agent.role,
+      phase: phaseIndex,
+      action: actionLabel,
+      content: "正在使用 AI 分析并生成交付物...",
+      status: "working",
+    });
+
+    // 调用 LLM
+    const startTime = Date.now();
+    const output = await callAgent(agentRole, ctx.prompt, previousContext, ctx.config.modelId);
+    const durationMs = Date.now() - startTime;
+
+    // 确定输出键
+    const outputKey = phaseIndex === 3 && agentRole !== "devops"
+      ? `${agentRole}_build`
+      : agentRole;
+
+    // Agent 输出
+    events.push({
+      type: "agent:output",
+      taskId: ctx.taskId,
+      agent,
+      phase: phaseIndex,
+      content: output,
+      isStreaming: false,
+      timestamp: Date.now(),
+    });
+
+    // Agent 完成
+    events.push({
+      type: "agent:status",
+      taskId: ctx.taskId,
+      agent,
+      phase: phaseIndex,
+      status: "done",
+      action: actionLabel,
+      timestamp: Date.now(),
+    });
+
+    await createAgentLog({
+      taskId: ctx.taskId,
+      agentName: agent.name,
+      agentRole: agent.role,
+      phase: phaseIndex,
+      action: actionLabel,
+      content: output,
+      status: "done",
+      durationMs,
+    });
+
+    return { role: agentRole, outputKey, output, durationMs, events };
+  }
+
+  // ─── 串行执行单个 Agent（兜底 / 单 Agent 阶段） ─────────────────
+
+  private async *executeAgent(
+    ctx: ExecutorContext,
+    phaseIndex: number,
+    agentRole: string,
+    agentOutputs: Record<string, string>,
+  ): AsyncGenerator<TaskEvent, void, unknown> {
+    const agentDef = AGENT_REGISTRY[agentRole];
+    if (!agentDef) return;
+
+    const agent: AgentIdentity = {
+      name: agentDef.name,
+      role: agentDef.role,
+      department: agentDef.department,
+    };
+    const actionLabel = getActionLabel(agentRole, phaseIndex);
+
+    yield {
+      type: "agent:status",
+      taskId: ctx.taskId,
+      agent,
+      phase: phaseIndex,
+      status: "thinking",
+      action: actionLabel,
+      timestamp: Date.now(),
+    };
+
+    await createAgentLog({
+      taskId: ctx.taskId,
+      agentName: agent.name,
+      agentRole: agent.role,
+      phase: phaseIndex,
+      action: actionLabel,
+      content: null,
+      status: "thinking",
+    });
+
+    const previousContext = buildAgentContext(agentOutputs, agentRole);
+
+    yield {
+      type: "agent:status",
+      taskId: ctx.taskId,
+      agent,
+      phase: phaseIndex,
+      status: "working",
+      action: actionLabel,
+      timestamp: Date.now(),
+    };
+
+    await createAgentLog({
+      taskId: ctx.taskId,
+      agentName: agent.name,
+      agentRole: agent.role,
+      phase: phaseIndex,
+      action: actionLabel,
+      content: "正在使用 AI 分析并生成交付物...",
+      status: "working",
+    });
+
+    const startTime = Date.now();
+    const output = await callAgent(agentRole, ctx.prompt, previousContext, ctx.config.modelId);
+    const durationMs = Date.now() - startTime;
+
+    const outputKey = phaseIndex === 3 && agentRole !== "devops"
+      ? `${agentRole}_build`
+      : agentRole;
+    agentOutputs[outputKey] = output;
+
+    yield {
+      type: "agent:output",
+      taskId: ctx.taskId,
+      agent,
+      phase: phaseIndex,
+      content: output,
+      isStreaming: false,
+      timestamp: Date.now(),
+    };
+
+    yield {
+      type: "agent:status",
+      taskId: ctx.taskId,
+      agent,
+      phase: phaseIndex,
+      status: "done",
+      action: actionLabel,
+      timestamp: Date.now(),
+    };
+
+    await createAgentLog({
+      taskId: ctx.taskId,
+      agentName: agent.name,
+      agentRole: agent.role,
+      phase: phaseIndex,
+      action: actionLabel,
+      content: output,
+      status: "done",
+      durationMs,
+    });
+  }
+
+  // ─── 依赖分析 ─────────────────────────────────────────
+
+  /**
+   * 分析同阶段 Agent 的依赖关系，分为可立即执行和需延迟的。
+   *
+   * 规则：
+   * - 如果 Agent 的 contextFrom 中的所有依赖都已在 agentOutputs 中，则可立即执行
+   * - 如果依赖中包含同阶段的其他 Agent（如 Build 阶段的 devops 依赖 backend_build），
+   *   则需要延迟到第一批完成后
+   */
+  private analyzeDependencies(
+    agentRoles: string[],
+    agentOutputs: Record<string, string>,
+    phaseIndex: number,
+  ): { immediate: string[]; deferred: string[] } {
+    const immediate: string[] = [];
+    const deferred: string[] = [];
+
+    // 计算同阶段 Agent 会产出的 outputKey
+    const samePhaseOutputKeys = new Set(
+      agentRoles.map(role =>
+        phaseIndex === 3 && role !== "devops" ? `${role}_build` : role,
+      ),
+    );
+
+    for (const role of agentRoles) {
+      const agentDef = AGENT_REGISTRY[role];
+      if (!agentDef) continue;
+
+      // 检查是否有依赖指向同阶段的其他 Agent 的输出
+      const hasSamePhaseDep = agentDef.contextFrom.some(dep => {
+        // 依赖不在已有输出中，且是同阶段 Agent 的输出
+        return !agentOutputs[dep] && samePhaseOutputKeys.has(dep);
+      });
+
+      if (hasSamePhaseDep) {
+        deferred.push(role);
+      } else {
+        immediate.push(role);
+      }
+    }
+
+    return { immediate, deferred };
+  }
+
+  /**
+   * 检查 Agent 的所有依赖是否已满足
+   */
+  private areDependenciesMet(
+    agentRole: string,
+    agentOutputs: Record<string, string>,
+    _phaseIndex: number,
+  ): boolean {
+    const agentDef = AGENT_REGISTRY[agentRole];
+    if (!agentDef) return true;
+
+    return agentDef.contextFrom.every(dep => !!agentOutputs[dep]);
+  }
+
+  // ─── 质量门控（与 SequentialExecutor 共享逻辑） ─────────────────
 
   private async *runQualityGate(
     engine: VerificationEngine,
@@ -303,7 +612,6 @@ export class SequentialExecutor implements TaskExecutor {
 
     const label = gateLabels[gate];
 
-    // 门控开始
     yield {
       type: "gate:status",
       taskId,
@@ -317,7 +625,6 @@ export class SequentialExecutor implements TaskExecutor {
     yield* this.emitGateLog(taskId, phaseIndex, label, `🔍 开始 ${label}：正在对照验收标准验证各智能体输出...`, "thinking");
 
     try {
-      // 门控验证中
       yield {
         type: "gate:status",
         taskId,
@@ -331,7 +638,6 @@ export class SequentialExecutor implements TaskExecutor {
       const report = await engine.runGate(taskId, gate, agentOutputs);
 
       if (report.gatePass) {
-        // 门控通过
         const passedCount = report.results.filter(r => r.status === "pass").length;
         const totalCount = report.results.length;
 
@@ -361,7 +667,7 @@ export class SequentialExecutor implements TaskExecutor {
         return { passed: true, updatedOutputs: agentOutputs };
       }
 
-      // 门控未通过
+      // 门控未通过 → 修复循环
       const failedCriteria = report.results.filter(r => r.status === "fail" || r.status === "partial");
 
       yield {
@@ -388,7 +694,6 @@ export class SequentialExecutor implements TaskExecutor {
         "reviewing",
       );
 
-      // 修复循环
       yield {
         type: "gate:status",
         taskId,
@@ -411,7 +716,6 @@ export class SequentialExecutor implements TaskExecutor {
         },
       );
 
-      // 修复结果
       if (fixResult.decision === "pass") {
         yield {
           type: "gate:status",
@@ -462,7 +766,7 @@ export class SequentialExecutor implements TaskExecutor {
         return { passed: true, updatedOutputs: fixResult.updatedOutputs };
       }
 
-      // user_intervention — 修复失败
+      // user_intervention
       yield {
         type: "gate:status",
         taskId,
@@ -487,7 +791,7 @@ export class SequentialExecutor implements TaskExecutor {
 
       return { passed: false, updatedOutputs: fixResult.updatedOutputs };
     } catch (error) {
-      console.error(`[SequentialExecutor] ${label} 执行出错:`, error);
+      console.error(`[ConcurrentExecutor] ${label} 执行出错:`, error);
 
       yield {
         type: "gate:status",
@@ -513,7 +817,6 @@ export class SequentialExecutor implements TaskExecutor {
 
   // ─── 辅助方法 ─────────────────────────────────────────
 
-  /** 发射门控日志（同时写数据库和产出事件） */
   private async *emitGateLog(
     taskId: number,
     phase: number,
@@ -531,7 +834,6 @@ export class SequentialExecutor implements TaskExecutor {
       status,
     });
 
-    // 也发射为 agent:output 事件，让前端能实时看到门控日志
     yield {
       type: "agent:output",
       taskId,
@@ -543,10 +845,8 @@ export class SequentialExecutor implements TaskExecutor {
     };
   }
 
-  /** 格式化门控结果 */
   private formatGateResults(report: VerificationReport): string {
     const lines: string[] = [];
-
     for (const result of report.results) {
       const statusIcon = {
         pass: "✅",
@@ -554,26 +854,23 @@ export class SequentialExecutor implements TaskExecutor {
         partial: "⚠️",
         not_applicable: "➖",
       }[result.status];
-
       lines.push(`${statusIcon} **${result.criterionId}**: ${result.reasoning}`);
-
       if (result.fixSuggestion) {
         lines.push(`  💡 修复建议: ${result.fixSuggestion}`);
       }
     }
-
     return lines.join("\n");
   }
 
-  /** 构建最终结果摘要 */
   private buildResultSummary(
     prompt: string,
     outputs: Record<string, string>,
     criteriaCount: number = 0,
   ): Record<string, unknown> {
     return {
-      summary: `任务「${prompt}」已通过 6 个流水线阶段、${AGENT_LIST.length} 个专业 AI 智能体成功完成。` +
+      summary: `任务「${prompt}」已通过 6 个流水线阶段、${AGENT_LIST.length} 个专业 AI 智能体成功完成（并发模式）。` +
         (criteriaCount > 0 ? ` 经过 ${criteriaCount} 条验收标准的质量门控验证。` : ""),
+      executionMode: "concurrent",
       phases: PIPELINE_PHASES.map(p => p.name),
       agentsUsed: AGENT_LIST.length,
       qualityGates: criteriaCount > 0 ? {

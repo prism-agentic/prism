@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { Streamdown } from "streamdown";
 import {
@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import ModelSelector from "@/components/ModelSelector";
 import VerificationReportCard from "@/components/VerificationReportCard";
+import { useTaskSSE, type SSEConnectionState } from "@/hooks/useTaskSSE";
+import type { TaskEvent } from "../../../shared/taskEvents";
 
 // ─── Agent Definitions ──────────────────────────────────────────────
 
@@ -936,14 +938,72 @@ export default function Workspace() {
 
   const projectQuery = trpc.project.get.useQuery({ id: projectId }, { enabled: isAuthenticated && projectId > 0 });
   const tasksQuery = trpc.task.list.useQuery({ projectId }, { enabled: isAuthenticated && projectId > 0 });
+  const activeTask = tasksQuery.data?.find(t => t.id === activeTaskId);
+  const isRunning = activeTask?.status === "running";
+
+  // SSE real-time events (active during pipeline execution)
+  const {
+    connectionState: sseState,
+    events: sseEvents,
+    clearEvents: clearSSEEvents,
+  } = useTaskSSE({
+    taskId: activeTaskId,
+    enabled: isRunning,
+    onTaskStatus: useCallback((event: { status: string }) => {
+      // When task completes/fails via SSE, refetch task list to update status
+      if (event.status === "completed" || event.status === "failed") {
+        tasksQuery.refetch();
+      }
+    }, []),
+  });
+
+  // Fallback polling: only when SSE is NOT connected (initial load, completed tasks, etc.)
   const logsQuery = trpc.task.logs.useQuery(
     { taskId: activeTaskId! },
     {
-      enabled: !!activeTaskId,
-      refetchInterval: 2000,
+      enabled: !!activeTaskId && sseState !== "connected",
+      refetchInterval: sseState === "connected" ? false : 2000,
     }
   );
-  const activeTask = tasksQuery.data?.find(t => t.id === activeTaskId);
+
+  // Merge SSE events into log-like format for rendering
+  const sseLogsFromEvents = useMemo(() => {
+    return sseEvents
+      .filter(e => e.type === "agent:output" || e.type === "agent:status")
+      .map((e, i) => {
+        if (e.type === "agent:output") {
+          return {
+            id: `sse-${i}`,
+            agentRole: e.agent.role,
+            agentName: e.agent.name,
+            phase: e.phase,
+            action: "",
+            content: e.content,
+            status: "done" as const,
+            createdAt: new Date(e.timestamp),
+          };
+        }
+        if (e.type === "agent:status") {
+          return {
+            id: `sse-${i}`,
+            agentRole: e.agent.role,
+            agentName: e.agent.name,
+            phase: e.phase,
+            action: e.action,
+            content: e.action,
+            status: e.status,
+            createdAt: new Date(e.timestamp),
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }, [sseEvents]);
+
+  // Use SSE logs when connected, otherwise fall back to polling
+  const effectiveLogs = sseState === "connected" && sseLogsFromEvents.length > 0
+    ? sseLogsFromEvents
+    : (logsQuery.data || []) as any[];
 
   const createTaskMutation = trpc.task.create.useMutation({
     onSuccess: (data) => {
@@ -979,13 +1039,13 @@ export default function Workspace() {
 
   // Auto-scroll logs only when new entries arrive AND user is at the bottom
   useEffect(() => {
-    const newCount = logsQuery.data?.length ?? 0;
+    const newCount = effectiveLogs.length;
     const hadNewLogs = newCount > prevLogsCountRef.current;
     prevLogsCountRef.current = newCount;
     if (hadNewLogs && !userScrolledUpLogsRef.current) {
       logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [logsQuery.data]);
+  }, [effectiveLogs]);
 
   // Refetch tasks while any is active
   useEffect(() => {
@@ -1022,9 +1082,9 @@ export default function Workspace() {
     );
   }
 
-  const logs: Array<any> = (logsQuery.data || []) as any;
+  const logs = effectiveLogs;
   const tasks = tasksQuery.data || [];
-  const latestDoneLogId = [...logs].reverse().find(l => l.status === "done")?.id;
+  const latestDoneLogId = [...logs].reverse().find((l: any) => l.status === "done")?.id;
 
   // Determine what view to show for the active task
   const isMeetingPhase = activeTask?.status === "clarifying" || (activeTask?.status === "pending" && !activeTask?.meetingRound);

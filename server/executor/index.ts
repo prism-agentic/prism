@@ -17,6 +17,7 @@ export {
   abortTask,
   getRunningTaskCount,
   getRunningTaskIds,
+  getAvailableExecutors,
 } from "./orchestrator";
 
 // 事件总线
@@ -39,6 +40,7 @@ export {
 
 // 执行器实现（通常不需要直接使用，通过 Orchestrator 调用）
 export { SequentialExecutor } from "./sequentialExecutor";
+export { ConcurrentExecutor } from "./concurrentExecutor";
 
 // LLM 辅助函数（供修复循环等外部使用）
 export { callAgent, callAgentWithContext } from "./llmHelper";

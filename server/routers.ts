@@ -4,7 +4,6 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { simulateAgentPipeline } from "./agentSimulator";
 import { runTask, type ExecutorContext } from "./executor";
 import { runMeetingRound1, handleUserReply, generateRequirementsBrief } from "./requirementMeeting";
 import { VerificationEngine } from "./verification";

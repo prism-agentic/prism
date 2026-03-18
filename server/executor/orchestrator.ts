@@ -2,19 +2,27 @@
  * Orchestrator — 编排层
  *
  * 连接 tRPC API 和 TaskExecutor 的中间层，负责：
- * 1. 选择执行器（MVP 阶段固定使用 SequentialExecutor）
+ * 1. 选择执行器（sequential / concurrent）
  * 2. 消费执行器产出的事件流
  * 3. 通过事件总线推送 SSE 事件
  * 4. 错误处理和恢复
+ *
+ * 执行策略选择：
+ * - "sequential"：串行执行，每个 Agent 按顺序执行（稳定、调试友好）
+ * - "concurrent"：并发执行，同阶段 Agent 并行工作（更快、适合生产）
+ * - "auto"：自动选择（当前默认使用 concurrent）
  *
  * 调用方式：
  * ```typescript
  * // 在 routers.ts 中
  * runTask({ taskId, userId, projectId, prompt, config }).catch(console.error);
+ * // 或指定执行器
+ * runTask(ctx, "concurrent").catch(console.error);
  * ```
  */
 
 import { SequentialExecutor } from "./sequentialExecutor";
+import { ConcurrentExecutor } from "./concurrentExecutor";
 import { emitTaskEvent } from "./eventBus";
 import type { ExecutorContext, TaskExecutor } from "./types";
 
@@ -23,11 +31,35 @@ import type { ExecutorContext, TaskExecutor } from "./types";
 /** 可用的执行器实例 */
 const executors: Record<string, TaskExecutor> = {
   sequential: new SequentialExecutor(),
-  // concurrent: new ConcurrentExecutor(),  // 未来
+  concurrent: new ConcurrentExecutor(),
 };
 
 /** 默认执行器名称 */
-const DEFAULT_EXECUTOR = "sequential";
+const DEFAULT_EXECUTOR = "concurrent";
+
+/**
+ * 自动选择执行器。
+ *
+ * 策略：
+ * - 默认使用 concurrent（更快）
+ * - 如果环境变量 EXECUTOR_MODE 指定了模式，使用指定模式
+ */
+function resolveExecutor(name: string): TaskExecutor {
+  if (name === "auto") {
+    const envMode = process.env.EXECUTOR_MODE;
+    if (envMode && executors[envMode]) {
+      return executors[envMode];
+    }
+    return executors[DEFAULT_EXECUTOR];
+  }
+
+  const executor = executors[name];
+  if (!executor) {
+    console.warn(`[Orchestrator] 未知执行器 "${name}"，回退到 ${DEFAULT_EXECUTOR}`);
+    return executors[DEFAULT_EXECUTOR];
+  }
+  return executor;
+}
 
 // ─── 运行中任务跟踪 ─────────────────────────────────────────
 
@@ -62,16 +94,13 @@ export function abortTask(taskId: number): boolean {
  * 选择执行器 → 消费事件流 → 推送 SSE → 错误处理
  *
  * @param ctx - 执行上下文
- * @param executorName - 执行器名称（默认 "sequential"）
+ * @param executorName - 执行器名称（"sequential" | "concurrent" | "auto"，默认 "auto"）
  */
 export async function runTask(
   ctx: ExecutorContext,
-  executorName: string = DEFAULT_EXECUTOR,
+  executorName: string = "auto",
 ): Promise<void> {
-  const executor = executors[executorName];
-  if (!executor) {
-    throw new Error(`未知的执行器: ${executorName}`);
-  }
+  const executor = resolveExecutor(executorName);
 
   // 防止同一任务重复执行
   if (runningTasks.has(ctx.taskId)) {
@@ -153,4 +182,15 @@ export function getRunningTaskCount(): number {
  */
 export function getRunningTaskIds(): number[] {
   return Array.from(runningTasks.keys());
+}
+
+/**
+ * 获取可用的执行器列表
+ */
+export function getAvailableExecutors(): { name: string; description: string }[] {
+  return [
+    { name: "sequential", description: "串行执行：每个 Agent 按顺序执行，稳定可靠" },
+    { name: "concurrent", description: "并发执行：同阶段 Agent 并行工作，速度更快" },
+    { name: "auto", description: "自动选择：根据环境配置自动选择最优策略" },
+  ];
 }

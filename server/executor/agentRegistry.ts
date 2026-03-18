@@ -1,8 +1,8 @@
 /**
  * Agent 定义注册表 — 集中管理所有 Agent 定义
  *
- * 从 agentSimulator.ts 中提取 Agent 定义、系统提示词、上下文依赖关系，
- * 形成独立的注册表模块。便于管理、扩展和测试。
+ * 集中管理所有 Agent 定义、系统提示词、上下文依赖关系。
+ * 便于管理、扩展和测试。
  */
 
 import type { AgentIdentity } from "../../shared/taskEvents";
